@@ -10,22 +10,19 @@ export default function OAuthButtons() {
   };
 
   return (
-    <>
+    <div className="flex flex-col gap-2">
       <button
         onClick={googleLogin}
-        className="w-full flex items-center justify-center gap-2 border border-white bg-black p-2 rounded text-sm"
+        className="bg-red-600 hover:bg-red-700 text-white rounded px-4 py-2 font-semibold"
       >
-        <img src="/google-icon.svg" alt="Google" className="h-4 w-4" />
         Login with Google
       </button>
-
       <button
         onClick={githubLogin}
-        className="mt-2 w-full flex items-center justify-center gap-2 border border-white bg-black p-2 rounded text-sm"
+        className="bg-gray-800 hover:bg-gray-900 text-white rounded px-4 py-2 font-semibold"
       >
-        <img src="/github.svg" alt="GitHub" className="h-4 w-4" />
         Login with GitHub
       </button>
-    </>
+    </div>
   );
 }
