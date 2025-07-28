@@ -1,9 +1,4 @@
 // src/pages/OAuthRedirectHandler.jsx
-// Parse the token from the URL query parameters after your backend OAuth redirect
-// Send it securely to your backend to set the HttpOnly cookie (via a POST request)
-// Redirect users to the dashboard on success, or the auth page on failure
-// Show loading or error state during this process
-
 import React, { useEffect, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 

@@ -5,9 +5,12 @@ import OAuthButtons from "../components/OAuthButtons";
 import ToggleMode from "../components/ToggleMode";
 import { useAuth } from "../hooks/useAuth";
 import logo from "../../../assets/images/logo.png";
+import { getCookieValue } from "../../../shared/utils/cookieUtils"; // Adjust the import path as needed
+import { useNavigate } from "react-router-dom";
 
 export default function AuthPage() {
   const { login, register } = useAuth();
+  const navigate = useNavigate();
   const [authMode, setAuthMode] = useState("login");
   const [formData, setFormData] = useState({
     email: "",
@@ -23,12 +26,15 @@ export default function AuthPage() {
   const handleLogin = async () => {
     const result = await login(formData.email, formData.password);
     if (result.success) {
-      alert("Login successful!");
-      // TODO: Navigate to dashboard
-    } else {
-      alert("Login failed: " + result.error);
+      // Store JWT token for WebSocket authentication
+      const token = result.token || getCookieValue("jwt");
+      if (token) {
+        localStorage.setItem("authToken", token);
+      }
+      navigate("/dashboard");
     }
   };
+
 
   const handleRegister = async () => {
     const result = await register(
@@ -72,7 +78,7 @@ export default function AuthPage() {
             <img
               src={logo}
               alt="MyApp Logo"
-              className="bg-transparent w-20 h-20 sm:w-16 sm:h-16 object-contain rounded-full shadow-lg bg-white"
+              className="bg-transparent w-20 h-20 sm:w-16 sm:h-16 object-contain  shadow-lg"
             />
             <h2 className="mt-3 text-xl sm:text-2xl font-bold tracking-wide text-center">
               Welcome to MyApp

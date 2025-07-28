@@ -40,7 +40,7 @@ const AuthService = {
   },
 
   async getCurrentUser() {
-    const response = await fetch(`${API_BASE}/auth/me`, {
+    const response = await fetch(`${API_BASE}/users/me`, {
       credentials: "include",
     });
     if (!response.ok) {
@@ -50,7 +50,7 @@ const AuthService = {
   },
 
   async handleOAuthCallback({ code, state }) {
-    const response = await fetch(`${API_BASE}/auth/oauth/callback`, {
+    const response = await fetch(`${API_BASE}/auth/oauth2/callback`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ code, state }),

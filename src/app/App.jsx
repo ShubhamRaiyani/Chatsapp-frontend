@@ -15,7 +15,12 @@ import {
 
 // Page Components
 // import AuthPage from "./pages/AuthPage";
-import DashboardPage from "../pages/DashboardPage"; // Or ChatPage
+import {
+  Dashboard,
+  ChatProvider,
+  TypingProvider,
+  SubscriptionProvider,
+} from "../features/chat"; // Or ChatPage
 // import EmailVerificationPage from "./pages/EmailVerificationPage";
 // import OAuthRedirectHandler from "./pages/OAuthRedirectHandler";
 
@@ -41,35 +46,47 @@ function ProtectedRoute({ children }) {
 export default function App() {
   return (
     <AuthProvider>
-      <BrowserRouter>
-        <Routes>
-          {/* Public Auth Page (Login/Register toggle) */}
-          <Route path="/auth" element={<AuthPage />} />
-          <Route path="/oauth2/redirect" element={<OAuthRedirectHandler />} />
-          <Route path="/auth2" element={<DashboardPage />} />
-          {/* Email Verification page, user arrives here via email link */}
-          <Route path="/verify-email" element={<EmailVerificationPage />} />
-          Main Dashboard (protected)
-          <Route
-            path="/dashboard"
-            element={
-              <ProtectedRoute>
-                <DashboardPage />
-              </ProtectedRoute>
-            }
-          />
-          {/* Default route logic */}
-          <Route path="/" element={<Navigate to="/dashboard" />} />
-          {/* Catch-all: redirect unknown routes to auth or dashboard based on auth state */}
-          <Route
-            path="*"
-            element={
-              // Decide destination based on user state
-              <AuthStateRedirect />
-            }
-          />
-        </Routes>
-      </BrowserRouter>
+      <ChatProvider>
+        <TypingProvider>
+          <SubscriptionProvider>
+            <BrowserRouter>
+              <Routes>
+                {/* Public Auth Page (Login/Register toggle) */}
+                <Route path="/auth" element={<AuthPage />} />
+                <Route
+                  path="/oauth2/redirect"
+                  element={<OAuthRedirectHandler />}
+                />
+                {/* <Route path="/auth2" element={<Dashboard />} /> */}
+                {/* Email Verification page, user arrives here via email link */}
+                <Route
+                  path="/verify-email"
+                  element={<EmailVerificationPage />}
+                />
+                Main Dashboard (protected)
+                <Route
+                  path="/dashboard"
+                  element={
+                    <ProtectedRoute>
+                      <Dashboard />
+                    </ProtectedRoute>
+                  }
+                />
+                {/* Default route logic */}
+                <Route path="/" element={<Navigate to="/dashboard" />} />
+                {/* Catch-all: redirect unknown routes to auth or dashboard based on auth state */}
+                <Route
+                  path="*"
+                  element={
+                    // Decide destination based on user state
+                    <AuthStateRedirect />
+                  }
+                />
+              </Routes>
+            </BrowserRouter>
+          </SubscriptionProvider>
+        </TypingProvider>
+      </ChatProvider>
     </AuthProvider>
   );
 }
