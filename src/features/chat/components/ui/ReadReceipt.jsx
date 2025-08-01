@@ -1,6 +1,6 @@
 // chat/components/ui/ReadReceipt.jsx
 import React from "react";
-import Avatar from "../Avatar";
+import Avatar from "./Avatar";
 
 const ReadReceipt = ({ message, users = [], className = "" }) => {
   if (!users || users.length === 0) return null;

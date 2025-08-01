@@ -11,19 +11,40 @@ class MessageService {
   async sendMessage(messageData) {
     try {
       // Send via REST API first for persistence
-      const message = await ChatAPI.sendMessage(messageData.chatId, {
-        content: messageData.content,
-        type: messageData.type || "text",
-        attachments: messageData.attachments || [],
-      });
+      // const message = await ChatAPI.sendMessage(messageData.chatId, {
+      //   content: messageData.content,
+      //   type: messageData.type || "text",
+      //   attachments: messageData.attachments || [],
+      // });
 
       // Then broadcast via WebSocket for real-time delivery
-      this.wsService.send("/app/chat.sendMessage", {
-        chatId: messageData.chatId,
-        messageId: message.id,
+      // MessageDTO
+//         private UUID messageId;
+//     private String content;  imp
+// //    private String senderEmail;
+//     private String receiverEmail; imp
+//     private UUID chatId;  impp
+//     private UUID groupId;  impp
+      //     private String messageType;
+      
+      if (!messageData.chatId && !messageData.groupId) {
+        throw new Error("Chat ID or Group ID is required to send a message");
+      }
+
+      if (!messageData.receiverEmail) {
+        throw new Error("Receiver email is required to send a message");
+      }
+      if (!messageData.content) {
+        throw new Error("Message content cannot be empty");
+      }
+    
+
+      const message = this.wsService.sendMessage("/app/chat.send", {
+        chatId: messageData.chatId || null,
+        groupId: messageData.groupId || null,
+        receiverEmail: messageData.receiverEmail,
         content: messageData.content,
-        type: messageData.type || "text",
-        timestamp: message.timestamp,
+        type: messageData.type || "text"
       });
 
       return message;
@@ -33,7 +54,7 @@ class MessageService {
     }
   }
 
-  // Send file message
+  // Send file message { Version 2 }
   async sendFileMessage(chatId, file, content = "") {
     try {
       // Upload file first
@@ -62,7 +83,7 @@ class MessageService {
     }
   }
 
-  // Edit message
+  // Edit message { Version 2 }
   async editMessage(messageId, newContent) {
     try {
       const updatedMessage = await ChatAPI.editMessage(messageId, newContent);
@@ -82,7 +103,7 @@ class MessageService {
     }
   }
 
-  // Delete message
+  // Delete message { Version 2 }
   async deleteMessage(messageId) {
     try {
       await ChatAPI.deleteMessage(messageId);
@@ -97,7 +118,7 @@ class MessageService {
     }
   }
 
-  // React to message
+  // React to message  { Version 2 }
   async reactToMessage(messageId, emoji) {
     try {
       const updatedMessage = await ChatAPI.reactToMessage(messageId, emoji);
@@ -119,7 +140,7 @@ class MessageService {
   // Load messages with caching
   async loadMessages(chatId, page = 0, size = 50) {
     try {
-      return await ChatAPI.getMessages(chatId, page, size);
+      return await ChatAPI.getMessages(chatId, page, size); //CHECK if this is correct
     } catch (error) {
       console.error("Failed to load messages:", error);
       throw error;

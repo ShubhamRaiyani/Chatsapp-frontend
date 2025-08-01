@@ -1,39 +1,39 @@
-// features/chat/contexts/ChatProvider.jsx - Add mounting guards
+// features/chat/contexts/ChatProvider.jsx
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import ChatContext from "./ChatContext";
 import ChatAPI from "../services/ChatAPI";
 import webSocketService from "../services/WebSocketService";
-import { useAuth } from "../../auth";
+import { useAuth } from "../../auth/hooks/useAuth";
 
 export function ChatProvider({ children }) {
+  // Core state
   const [chats, setChats] = useState([]);
   const [selectedChat, setSelectedChat] = useState(null);
-  const [messages, setMessages] = useState({});
+  const [messages, setMessages] = useState({}); // { chatId: [messages] }
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [connected, setConnected] = useState(false);
   const [sendingMessage, setSendingMessage] = useState(false);
+
+  // Pagination state for messages
   const [messagePagination, setMessagePagination] = useState({});
 
   const { user, isAuthenticated } = useAuth();
 
-  // Component lifecycle tracking
-  const isMounted = useRef(true);
-  const isInitialized = useRef(false);
+  // ✅ Session tracking to prevent duplicate connections
+  const currentSessionRef = useRef(null);
   const connectionListeners = useRef([]);
+  const isMounted = useRef(true);
 
-  // Stable user reference to prevent unnecessary re-renders
-  const stableUser = useRef(user);
-  const stableAuthState = useRef(isAuthenticated);
+  // Generate unique session ID per user to prevent duplicate connections
+  const generateSessionId = useCallback((user) => {
+    if (!user) return null;
+    return `${user.email}-${Date.now()}`;
+  }, []);
 
-  useEffect(() => {
-    stableUser.current = user;
-    stableAuthState.current = isAuthenticated;
-  }, [user, isAuthenticated]);
-
-  // Load chats function - stable reference
+  // Load all chats from API
   const loadChats = useCallback(async () => {
-    if (!stableAuthState.current || !isMounted.current) return;
+    if (!isAuthenticated || !isMounted.current) return;
 
     try {
       setLoading(true);
@@ -54,121 +54,9 @@ export function ChatProvider({ children }) {
         setLoading(false);
       }
     }
-  }, []); // Empty deps - uses refs for stable values
+  }, [isAuthenticated]);
 
-  // WebSocket initialization - runs only once per component lifecycle
-  useEffect(() => {
-    isMounted.current = true;
-
-    // Prevent multiple initializations
-    if (!isAuthenticated || !user || isInitialized.current) {
-      return;
-    }
-
-    const initializeWebSocket = async () => {
-      if (!isMounted.current) return;
-
-      try {
-        console.log("🚀 Initializing WebSocket connection...");
-        isInitialized.current = true;
-
-        const token =
-          localStorage.getItem("authToken") ||
-          sessionStorage.getItem("authToken");
-
-        await webSocketService.connect(token);
-
-        if (!isMounted.current) return;
-
-        console.log("✅ WebSocket connection established");
-
-        const unsubscribeConnection = webSocketService.onConnectionChange(
-          (isConnected) => {
-            if (isMounted.current) {
-              console.log(
-                `🔌 WebSocket connection status: ${
-                  isConnected ? "Connected" : "Disconnected"
-                }`
-              );
-              setConnected(isConnected);
-            }
-          }
-        );
-
-        const unsubscribeMessages = webSocketService.onMessage(
-          (messageData) => {
-            if (!isMounted.current) return;
-
-            console.log("📨 Received message from WebSocket:", messageData);
-
-            const chatId = messageData.chatId || messageData.groupId;
-            if (chatId) {
-              setMessages((prevMessages) => {
-                const chatMessages = prevMessages[chatId] || [];
-                const existingMessageIndex = chatMessages.findIndex(
-                  (msg) => msg.messageId === messageData.messageId
-                );
-
-                if (existingMessageIndex === -1) {
-                  return {
-                    ...prevMessages,
-                    [chatId]: [messageData, ...chatMessages],
-                  };
-                }
-                return prevMessages;
-              });
-
-              setChats((prevChats) =>
-                prevChats.map((chat) =>
-                  chat.id === chatId
-                    ? { ...chat, lastActivity: messageData.sentAt }
-                    : chat
-                )
-              );
-            }
-          }
-        );
-
-        connectionListeners.current = [
-          unsubscribeConnection,
-          unsubscribeMessages,
-        ];
-
-        // Load chats after WebSocket is set up
-        loadChats();
-      } catch (error) {
-        if (isMounted.current) {
-          console.error("❌ Failed to initialize WebSocket:", error);
-          setError("Failed to connect to chat service");
-          isInitialized.current = false;
-        }
-      }
-    };
-
-    initializeWebSocket();
-
-    // Cleanup only on component unmount
-    return () => {
-      isMounted.current = false;
-
-      if (isInitialized.current) {
-        console.log("🧹 Cleaning up WebSocket connection");
-
-        connectionListeners.current.forEach((unsubscribe) => {
-          if (typeof unsubscribe === "function") {
-            unsubscribe();
-          }
-        });
-        connectionListeners.current = [];
-
-        // Only disconnect if this is the last provider instance
-        webSocketService.disconnect();
-        isInitialized.current = false;
-      }
-    };
-  }, []); // Empty deps - only run once per component lifecycle
-
-  // Rest of your methods remain the same...
+  // Load messages for a specific chat with pagination
   const loadMessages = useCallback(
     async (chatId, isGroup = false, page = 0) => {
       if (!chatId || !isMounted.current) return;
@@ -185,22 +73,30 @@ export function ChatProvider({ children }) {
 
         setMessages((prevMessages) => {
           const existingMessages = prevMessages[chatId] || [];
+
           if (page === 0) {
-            return { ...prevMessages, [chatId]: messagesData.content };
+            // Replace all messages for first page
+            return {
+              ...prevMessages,
+              [chatId]: messagesData.content || [],
+            };
           }
+
+          // Append messages for pagination (older messages)
           return {
             ...prevMessages,
-            [chatId]: [...existingMessages, ...messagesData.content],
+            [chatId]: [...existingMessages, ...(messagesData.content || [])],
           };
         });
 
+        // Update pagination info
         setMessagePagination((prev) => ({
           ...prev,
           [chatId]: {
-            currentPage: messagesData.number,
-            totalPages: messagesData.totalPages,
+            currentPage: messagesData.number || 0,
+            totalPages: messagesData.totalPages || 1,
             hasMore: !messagesData.last,
-            totalElements: messagesData.totalElements,
+            totalElements: messagesData.totalElements || 0,
           },
         }));
 
@@ -215,7 +111,134 @@ export function ChatProvider({ children }) {
     []
   );
 
-  // Your other methods remain exactly the same...
+  // ✅ MAIN FIX: Single WebSocket connection per user session
+  useEffect(() => {
+    isMounted.current = true;
+
+    if (!isAuthenticated || !user) {
+      // User logged out - cleanup existing connection
+      if (currentSessionRef.current) {
+        console.log("🧹 User logged out, cleaning up WebSocket");
+        webSocketService.forceDisconnect();
+        currentSessionRef.current = null;
+        setConnected(false);
+      }
+      return;
+    }
+
+    // Generate session ID for this user
+    const sessionId = generateSessionId(user);
+
+    // If same session, don't reconnect
+    if (currentSessionRef.current === sessionId) {
+      console.log("✅ Same user session, keeping existing connection");
+      return;
+    }
+
+    const initializeConnection = async () => {
+      try {
+        console.log("🚀 Initializing WebSocket for session:", sessionId);
+        currentSessionRef.current = sessionId;
+
+        // ✅ Connect with session ID - prevents duplicates
+        await webSocketService.connect(sessionId);
+
+        if (!isMounted.current) return;
+
+        // Set up connection status listener
+        const unsubscribeConnection = webSocketService.onConnectionChange(
+          (isConnected) => {
+            if (isMounted.current) {
+              console.log(
+                `🔌 WebSocket status: ${
+                  isConnected ? "Connected" : "Disconnected"
+                }`
+              );
+              setConnected(isConnected);
+            }
+          }
+        );
+
+        // Set up message listener for real-time updates
+        const unsubscribeMessages = webSocketService.onMessage(
+          (messageData) => {
+            if (!isMounted.current) return;
+
+            console.log("📨 Received message:", messageData);
+            const chatId = messageData.chatId || messageData.groupId;
+
+            if (chatId) {
+              setMessages((prev) => {
+                const existing = prev[chatId] || [];
+
+                // Check for duplicate messages
+                const isDuplicate = existing.some(
+                  (msg) =>
+                    msg.messageId === messageData.messageId ||
+                    (msg.content === messageData.content &&
+                      msg.sentAt === messageData.sentAt)
+                );
+
+                if (!isDuplicate) {
+                  return { ...prev, [chatId]: [messageData, ...existing] };
+                }
+                return prev;
+              });
+
+              // Update chat's last activity
+              setChats((prev) =>
+                prev.map((chat) =>
+                  chat.id === chatId
+                    ? {
+                        ...chat,
+                        lastActivity: messageData.sentAt,
+                        lastMessage: messageData,
+                      }
+                    : chat
+                )
+              );
+            }
+          }
+        );
+
+        connectionListeners.current = [
+          unsubscribeConnection,
+          unsubscribeMessages,
+        ];
+
+        // Load chats after successful connection
+        loadChats();
+      } catch (error) {
+        if (isMounted.current) {
+          console.error("❌ WebSocket initialization failed:", error);
+          setError(`Connection failed: ${error.message}`);
+          currentSessionRef.current = null;
+        }
+      }
+    };
+
+    initializeConnection();
+
+    // Cleanup on unmount or user change
+    return () => {
+      isMounted.current = false;
+
+      // Clean up listeners
+      connectionListeners.current.forEach((unsubscribe) => {
+        if (typeof unsubscribe === "function") unsubscribe();
+      });
+      connectionListeners.current = [];
+
+      // Only disconnect if this was the active session
+      if (currentSessionRef.current === sessionId) {
+        console.log("🧹 Cleaning up WebSocket for session:", sessionId);
+        webSocketService.disconnect();
+        currentSessionRef.current = null;
+      }
+    };
+  }, [isAuthenticated, user, generateSessionId, loadChats]);
+
+  // Select a chat and subscribe to its messages
   const selectChat = useCallback(
     async (chat) => {
       if (!chat || !connected || !isMounted.current) return;
@@ -223,13 +246,18 @@ export function ChatProvider({ children }) {
       console.log("🎯 Selecting chat:", chat);
       setSelectedChat(chat);
 
+      // Subscribe to WebSocket topic for this chat
       const subscription = webSocketService.subscribeToChat(
         chat.id,
         chat.isGroup
       );
       if (subscription) {
         console.log(`✅ Subscribed to chat: ${chat.id}`);
-        await loadMessages(chat.id, chat.isGroup, 0);
+
+        // Load messages if not already cached
+        if (!messages[chat.id]) {
+          await loadMessages(chat.id, chat.isGroup, 0);
+        }
       } else {
         console.error("❌ Failed to subscribe to chat");
         if (isMounted.current) {
@@ -237,15 +265,16 @@ export function ChatProvider({ children }) {
         }
       }
     },
-    [connected, loadMessages]
+    [connected, messages, loadMessages]
   );
 
+  // Send a message via WebSocket
   const sendMessage = useCallback(
     async (content, receiverEmail) => {
       if (
         !selectedChat ||
         !connected ||
-        !stableUser.current ||
+        !user ||
         !content.trim() ||
         !isMounted.current
       ) {
@@ -257,7 +286,7 @@ export function ChatProvider({ children }) {
       try {
         const messageData = {
           content: content.trim(),
-          senderEmail: stableUser.current.email,
+          senderEmail: user.email,
           receiverEmail: receiverEmail,
           chatId: selectedChat.isGroup ? null : selectedChat.id,
           groupId: selectedChat.isGroup ? selectedChat.id : null,
@@ -285,9 +314,10 @@ export function ChatProvider({ children }) {
         }
       }
     },
-    [selectedChat, connected]
+    [selectedChat, connected, user]
   );
 
+  // Create a new personal chat
   const createPersonalChat = useCallback(
     async (receiverEmail) => {
       if (!isMounted.current) return;
@@ -299,7 +329,7 @@ export function ChatProvider({ children }) {
         if (!isMounted.current) return;
 
         console.log("✅ Created personal chat:", newChat);
-        setChats((prevChats) => [newChat, ...prevChats]);
+        setChats((prev) => [newChat, ...prev]);
         await selectChat(newChat);
         return newChat;
       } catch (err) {
@@ -313,6 +343,7 @@ export function ChatProvider({ children }) {
     [selectChat]
   );
 
+  // Create a new group chat
   const createGroupChat = useCallback(
     async (name, memberEmails = []) => {
       if (!isMounted.current) return;
@@ -324,7 +355,7 @@ export function ChatProvider({ children }) {
         if (!isMounted.current) return;
 
         console.log("✅ Created group chat:", newChat);
-        setChats((prevChats) => [newChat, ...prevChats]);
+        setChats((prev) => [newChat, ...prev]);
         await selectChat(newChat);
         return newChat;
       } catch (err) {
@@ -338,6 +369,7 @@ export function ChatProvider({ children }) {
     [selectChat]
   );
 
+  // Load more messages for pagination
   const loadMoreMessages = useCallback(async () => {
     if (!selectedChat || !isMounted.current) return;
 
@@ -348,35 +380,44 @@ export function ChatProvider({ children }) {
     await loadMessages(selectedChat.id, selectedChat.isGroup, nextPage);
   }, [selectedChat, messagePagination, loadMessages]);
 
+  // Clear error state
   const clearError = useCallback(() => {
     if (isMounted.current) {
       setError(null);
     }
   }, []);
 
+  // Get current messages and pagination for context
   const currentMessages = selectedChat ? messages[selectedChat.id] || [] : [];
   const currentPagination = selectedChat
     ? messagePagination[selectedChat.id]
     : null;
 
+  // Context value provided to all children
   const contextValue = {
+    // State
     chats,
     selectedChat,
-    messages: currentMessages,
+    messages: currentMessages, // Current chat messages
+    allMessages: messages, // All messages by chatId
     loading,
     error,
     connected,
     sendingMessage,
     pagination: currentPagination,
+
+    // Actions
     loadChats,
-    refreshChats: loadChats,
+    refreshChats: loadChats, // Alias for convenience
     selectChat,
     sendMessage,
     createPersonalChat,
     createGroupChat,
     loadMoreMessages,
     clearError,
-    currentUser: stableUser.current,
+
+    // Current user
+    currentUser: user,
   };
 
   return (

@@ -2,7 +2,7 @@
 // ChatTopBar.jsx - Dark Theme Redesign
 // ========================================
 import React, { useState } from "react";
-import Avatar from "./Avatar";
+import Avatar from "./ui/Avatar";
 
 const ChatTopBar = ({
   chat,
@@ -15,14 +15,14 @@ const ChatTopBar = ({
   const [showDropdown, setShowDropdown] = useState(false);
 
   const getChatTitle = () => {
-    if (chat?.type === "group") {
-      return chat.name || "Group Chat";
+    if (chat.isGroup) {
+      return chat.displayName || "Group Chat";
     }
-    return chat?.participants?.[0]?.name || "Unknown User";
+    return chat.displayName || "Unknowns User";
   };
 
   const getChatSubtitle = () => {
-    if (chat?.type === "group") {
+    if (chat.isGroup) {
       const memberCount = chat.participants?.length || 0;
       const onlineCount =
         chat.participants?.filter((p) => p.status === "online").length || 0;
@@ -40,14 +40,14 @@ const ChatTopBar = ({
   };
 
   const getAvatarSrc = () => {
-    if (chat?.type === "group") {
+    if (chat.isGroup) {
       return chat.avatar || "/group-default.png";
     }
-    return chat?.participants?.[0]?.avatar;
+    return chat.avatar;
   };
 
   const getStatus = () => {
-    if (chat?.type === "group") return null;
+    if (chat.isGroup ) return null;
     return chat?.participants?.[0]?.status;
   };
 
@@ -99,7 +99,7 @@ const ChatTopBar = ({
       <div className="flex items-center space-x-2">
         {/* Search in Chat */}
         <button
-          className="p-2 text-gray-400 hover:text-white hover:bg-[#262626] rounded-xl transition-colors"
+          className="p-2 text-gray-400 hover:text-white hover:bg-[#393939] rounded-xl transition-colors"
           title="Search in chat"
         >
           <svg
@@ -121,7 +121,7 @@ const ChatTopBar = ({
         {chat?.type === "direct" && (
           <button
             onClick={onStartCall}
-            className="p-2 text-gray-400 hover:text-white hover:bg-[#262626] rounded-xl transition-colors"
+            className="p-2 text-gray-400 hover:text-white hover:bg-[#393939] rounded-xl transition-colors"
             title="Start voice call"
           >
             <svg
@@ -144,7 +144,7 @@ const ChatTopBar = ({
         {chat?.type === "direct" && (
           <button
             onClick={onStartVideoCall}
-            className="p-2 text-gray-400 hover:text-white hover:bg-[#262626] rounded-xl transition-colors"
+            className="p-2 text-gray-400 hover:text-white hover:bg-[#393939] rounded-xl transition-colors"
             title="Start video call"
           >
             <svg
@@ -167,7 +167,7 @@ const ChatTopBar = ({
         <div className="relative">
           <button
             onClick={() => setShowDropdown(!showDropdown)}
-            className="p-2 text-gray-400 hover:text-white hover:bg-[#262626] rounded-xl transition-colors"
+            className="p-2 text-gray-400 hover:text-white hover:bg-[#393939] rounded-xl transition-colors"
             title="More options"
           >
             <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
@@ -209,7 +209,7 @@ const ChatTopBar = ({
                   <span>Chat Info</span>
                 </button>
 
-                {chat?.type === "group" && (
+                {chat.isGroup && (
                   <button
                     onClick={() => {
                       onShowMembers?.();
@@ -234,7 +234,7 @@ const ChatTopBar = ({
                   </button>
                 )}
 
-                <button
+                {/* <button
                   onClick={() => {
                     // Handle pin/unpin
                     setShowDropdown(false);
@@ -255,7 +255,7 @@ const ChatTopBar = ({
                     />
                   </svg>
                   <span>{chat?.pinned ? "Unpin" : "Pin"} Chat</span>
-                </button>
+                </button> */}
 
                 <button
                   onClick={() => {

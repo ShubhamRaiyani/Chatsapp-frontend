@@ -51,6 +51,7 @@ export function AuthProvider({ children }) {
         // Refresh profile after login
         await fetchUserProfile();
         setLoading(false);
+        setIsAuthenticated(true);
         return { success: true };
       } catch (err) {
         setError(err.message);

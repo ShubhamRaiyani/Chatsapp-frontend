@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import Avatar from "./Avatar";
-import { formatMessageTime } from "../utils/dateUtils";
+import { formatMessageTime } from "../../utils/dateUtils";
 
 const MessageBubble = ({
   message,

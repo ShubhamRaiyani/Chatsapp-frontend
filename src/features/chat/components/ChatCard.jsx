@@ -1,6 +1,6 @@
 // chat/components/ChatCard.jsx - Dark Theme Redesign
 import React from "react";
-import Avatar from "./Avatar";
+import Avatar from "./ui/Avatar";
 import { formatChatTime } from "../utils/dateUtils";
 
 const ChatCard = ({
@@ -11,54 +11,56 @@ const ChatCard = ({
   className = "",
 }) => {
   const getChatTitle = () => {
-    if (chat.type === "group") {
-      return chat.name || "Group Chat";
+    console.log("getChatTitle called with chat:", chat);
+    if (chat.isGroup) {
+      return chat.displayName || "Group Chat";
     }
-    return chat.participants?.[0]?.name || "Unknown User";
+    return chat.displayName || "Unknownss User";
   };
 
   const getLastMessage = () => {
-    if (!chat.lastMessage) return "";
+    if (!chat.lastActivity) return "";
 
-    const { content, type, senderId } = chat.lastMessage;
-    const senderName = chat.participants?.find((p) => p.id === senderId)?.name;
-    const isOwn = senderId === currentUserId;
+    // const { content, type, senderId } = chat.lastMessage;
+    // const senderName = chat.participants?.find((p) => p.id === senderId)?.name;
+    // const isOwn = senderId === currentUserId;
 
-    let messagePreview = "";
+    // let messagePreview = "";
 
-    switch (type) {
-      case "text":
-        messagePreview = content;
-        break;
-      case "image":
-        messagePreview = "📷 Photo";
-        break;
-      case "file":
-        messagePreview = "📎 File";
-        break;
-      case "voice":
-        messagePreview = "🎵 Voice message";
-        break;
-      case "video":
-        messagePreview = "🎥 Video";
-        break;
-      default:
-        messagePreview = content;
-    }
+    // switch (type) {
+    //   case "text":
+    //     messagePreview = content;
+    //     break;
+    //   case "image":
+    //     messagePreview = "📷 Photo";
+    //     break;
+    //   case "file":
+    //     messagePreview = "📎 File";
+    //     break;
+    //   case "voice":
+    //     messagePreview = "🎵 Voice message";
+    //     break;
+    //   case "video":
+    //     messagePreview = "🎥 Video";
+    //     break;
+    //   default:
+    //     messagePreview = content;
+    // }
 
-    if (chat.type === "group" && !isOwn && senderName) {
-      return `${senderName}: ${messagePreview}`;
-    }
+    // if (chat.type === "group" && !isOwn && senderName) {
+    //   return `${senderName}: ${messagePreview}`;
+    // }
 
-    if (isOwn) {
-      return `You: ${messagePreview}`;
-    }
+    // if (isOwn) {
+    //   return `You: ${messagePreview}`;
+    // }
 
-    return messagePreview;
+    // return messagePreview;
+    return chat.lastActivity;
   };
 
   const getAvatarSrc = () => {
-    if (chat.type === "group") {
+    if (chat.isGroup) {
       return chat.avatar || "/group-default.png";
     }
     return chat.participants?.[0]?.avatar;
@@ -146,7 +148,7 @@ const ChatCard = ({
                 : "text-gray-400"
             }`}
           >
-            {lastMessage || "No messages yet"}
+            {lastMessage || "No messages timestamp yet"}
           </p>
         </div>
 

@@ -1,6 +1,6 @@
 // chat/components/NavigationSidebar.jsx
 import React, { useState } from "react";
-import Avatar from "./Avatar";
+import Avatar from "./ui/Avatar";
 
 const NavigationSidebar = ({
   activeSection,
@@ -130,12 +130,12 @@ const NavigationSidebar = ({
           >
             <div className="flex items-center justify-center">{item.icon}</div>
 
-            {/* Notification badge */}
+            {/* Notification badge
             {item.count > 0 && (
               <div className="absolute -top-1 -right-1 bg-[#EF4444] text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-medium">
                 {item.count > 99 ? "99+" : item.count}
               </div>
-            )}
+            )} */}
 
             {/* Tooltip */}
             <div className="absolute left-full ml-3 px-3 py-2 bg-[#262626] text-white text-sm rounded-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 whitespace-nowrap z-50">
@@ -337,11 +337,11 @@ const NavigationSidebar = ({
       </div>
 
       {/* Status Indicator */}
-      <div className="p-2 border-t border-[#262626]">
+      {/* <div className="p-2 border-t border-[#262626]">
         <div className="flex items-center justify-center">
           <div className="w-2 h-2 bg-[#22C55E] rounded-full animate-pulse"></div>
         </div>
-      </div>
+      </div> */}
     </div>
   );
 };

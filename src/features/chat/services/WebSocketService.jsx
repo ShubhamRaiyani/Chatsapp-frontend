@@ -1,4 +1,4 @@
-// features/chat/services/WebSocketService.js - Add persistence
+// features/chat/services/WebSocketService.js
 import SockJS from "sockjs-client";
 import { Client } from "@stomp/stompjs";
 
@@ -7,161 +7,215 @@ class WebSocketService {
     this.stompClient = null;
     this.connected = false;
     this.connecting = false;
+    this.connectionPromise = null;
+    this.sessionId = null;
     this.currentSubscription = null;
     this.messageCallbacks = new Set();
     this.connectionCallbacks = new Set();
-    this.subscriptionCallbacks = new Set();
     this.reconnectAttempts = 0;
-    this.maxReconnectAttempts = 5;
-    this.connectionRequested = false; // NEW: Track if connection was explicitly requested
+    this.maxReconnectAttempts = 3;
   }
 
-  connect(authToken = null) {
-    // Prevent multiple connection attempts
-    if (this.connected || this.connecting) {
-      console.log("WebSocket already connected or connecting");
+  // ✅ Single connection per user session
+  async connect(userSessionId = null) {
+    // Same session and connected - return immediately
+    if (this.connected && this.sessionId === userSessionId) {
+      console.log("✅ WebSocket already connected for session:", userSessionId);
       return Promise.resolve();
     }
 
-    // Mark connection as explicitly requested
-    this.connectionRequested = true;
+    // Different session - disconnect first
+    if (this.sessionId && this.sessionId !== userSessionId) {
+      console.log("🔄 New session detected, disconnecting previous");
+      await this.forceDisconnect();
+    }
+
+    // Connection in progress for this session
+    if (this.connectionPromise && this.sessionId === userSessionId) {
+      console.log("🔄 Connection in progress for session:", userSessionId);
+      return this.connectionPromise;
+    }
+
+    this.sessionId = userSessionId;
     this.connecting = true;
     this.reconnectAttempts = 0;
 
-    return new Promise((resolve, reject) => {
-      try {
-        const socket = new SockJS("http://localhost:8080/ws");
+    this.connectionPromise = this._createConnection();
 
-        this.stompClient = new Client({
-          webSocketFactory: () => socket,
-          reconnectDelay: 5000,
-          heartbeatIncoming: 4000,
-          heartbeatOutgoing: 4000,
-          connectHeaders: authToken
-            ? { Authorization: `Bearer ${authToken}` }
-            : {},
-          debug: (str) => {
-            console.log("STOMP Debug:", str);
-          },
-        });
-
-        this.stompClient.onConnect = (frame) => {
-          console.log("✅ WebSocket Connected:", frame);
-          this.connected = true;
-          this.connecting = false;
-          this.reconnectAttempts = 0;
-
-          this.connectionCallbacks.forEach((callback) => {
-            try {
-              callback(true);
-            } catch (error) {
-              console.error("Connection callback error:", error);
-            }
-          });
-          resolve();
-        };
-
-        this.stompClient.onStompError = (frame) => {
-          console.error("❌ WebSocket STOMP Error:", frame);
-          this.connected = false;
-          this.connecting = false;
-          this.handleConnectionError();
-          reject(new Error("STOMP connection failed"));
-        };
-
-        this.stompClient.onWebSocketError = (error) => {
-          console.error("❌ WebSocket Error:", error);
-          this.connected = false;
-          this.connecting = false;
-          this.handleConnectionError();
-          reject(error);
-        };
-
-        this.stompClient.onDisconnect = () => {
-          console.log("🔌 WebSocket Disconnected");
-          this.connected = false;
-          this.currentSubscription = null;
-
-          this.connectionCallbacks.forEach((callback) => {
-            try {
-              callback(false);
-            } catch (error) {
-              console.error("Connection callback error:", error);
-            }
-          });
-
-          // Only attempt reconnect if connection was requested and not explicitly disconnected
-          if (
-            this.connectionRequested &&
-            this.reconnectAttempts < this.maxReconnectAttempts
-          ) {
-            this.attemptReconnect(authToken);
-          }
-        };
-
-        this.stompClient.activate();
-      } catch (error) {
-        console.error("WebSocket connection setup failed:", error);
-        this.connecting = false;
-        reject(error);
-      }
-    });
-  }
-
-  // NEW: Handle connection errors with backoff
-  handleConnectionError() {
-    if (
-      this.connectionRequested &&
-      this.reconnectAttempts < this.maxReconnectAttempts
-    ) {
-      this.attemptReconnect();
+    try {
+      await this.connectionPromise;
+      return Promise.resolve();
+    } catch (error) {
+      this.connectionPromise = null;
+      throw error;
     }
   }
 
-  // NEW: Reconnection logic with exponential backoff
-  attemptReconnect(authToken = null) {
+  _createConnection() {
+    return new Promise((resolve, reject) => {
+      console.log("🚀 Creating WebSocket connection...");
+
+      // ✅ SockJS with credentials for HttpOnly cookies
+      const socket = new SockJS("http://localhost:8080/ws", null, {
+        withCredentials: true,
+      });
+
+      this.stompClient = new Client({
+        webSocketFactory: () => socket,
+        reconnectDelay: 0, // Manual reconnection
+        heartbeatIncoming: 25000,
+        heartbeatOutgoing: 25000,
+        connectHeaders: {}, // ✅ No headers needed - cookie handles auth
+        debug: (str) => {
+          if (
+            str.includes("Opening") ||
+            str.includes("CONNECT") ||
+            str.includes("CONNECTED") ||
+            str.includes("ERROR")
+          ) {
+            console.log("STOMP:", str);
+          }
+        },
+      });
+
+      const timeout = setTimeout(() => {
+        console.error("❌ WebSocket connection timeout");
+        this._cleanup();
+        reject(new Error("Connection timeout"));
+      }, 15000);
+
+      this.stompClient.onConnect = (frame) => {
+        clearTimeout(timeout);
+        console.log(
+          "✅ WebSocket Connected:",
+          frame.headers["user-name"] || "User"
+        );
+
+        this.connected = true;
+        this.connecting = false;
+        this.connectionPromise = null;
+        this.reconnectAttempts = 0;
+
+        this.connectionCallbacks.forEach((cb) => {
+          try {
+            cb(true);
+          } catch (e) {
+            console.error("Callback error:", e);
+          }
+        });
+
+        resolve();
+      };
+
+      this.stompClient.onStompError = (frame) => {
+        clearTimeout(timeout);
+        console.error("❌ STOMP Error:", frame.headers.message);
+        this._cleanup();
+        reject(new Error(`STOMP Error: ${frame.headers.message}`));
+      };
+
+      this.stompClient.onWebSocketError = (error) => {
+        clearTimeout(timeout);
+        console.error("❌ WebSocket Error:", error);
+        this._cleanup();
+        reject(error);
+      };
+
+      this.stompClient.onDisconnect = () => {
+        console.log("🔌 WebSocket Disconnected");
+        this.connected = false;
+        this.currentSubscription = null;
+
+        this.connectionCallbacks.forEach((cb) => {
+          try {
+            cb(false);
+          } catch (e) {
+            console.error("Callback error:", e);
+          }
+        });
+
+        if (
+          this.sessionId &&
+          this.reconnectAttempts < this.maxReconnectAttempts
+        ) {
+          this._scheduleReconnect();
+        }
+      };
+
+      this.stompClient.activate();
+    });
+  }
+
+  _scheduleReconnect() {
     this.reconnectAttempts++;
-    const delay = Math.pow(2, this.reconnectAttempts) * 1000; // Exponential backoff
+    const delay = Math.min(Math.pow(2, this.reconnectAttempts) * 1000, 30000);
 
     console.log(
-      `🔄 Attempting reconnect ${this.reconnectAttempts}/${this.maxReconnectAttempts} in ${delay}ms`
+      `🔄 Reconnect attempt ${this.reconnectAttempts}/${this.maxReconnectAttempts} in ${delay}ms`
     );
 
     setTimeout(() => {
-      if (this.connectionRequested && !this.connected && !this.connecting) {
-        this.connect(authToken).catch(console.error);
+      if (this.sessionId && !this.connected && !this.connecting) {
+        this.connecting = false;
+        this.connect(this.sessionId).catch(console.error);
       }
     }, delay);
   }
 
-  // Enhanced disconnect with explicit flag
-  disconnect() {
-    this.connectionRequested = false; // Mark connection as no longer requested
-
-    if (this.stompClient && this.connected) {
-      console.log("🔌 Disconnecting WebSocket");
-
-      if (this.currentSubscription) {
+  async forceDisconnect() {
+    if (this.currentSubscription) {
+      try {
         this.currentSubscription.unsubscribe();
-        this.currentSubscription = null;
+      } catch (e) {
+        console.error("Unsubscribe error:", e);
       }
-
-      this.stompClient.deactivate();
-      this.connected = false;
+      this.currentSubscription = null;
     }
+    if (this.stompClient) {
+      try {
+        this.stompClient.forceDisconnect();
+      } catch (e) {
+        console.error("Force disconnect error:", e);
+      }
+    }
+    this._cleanup();
   }
 
-  // Rest of your existing methods remain the same...
+  disconnect() {
+    if (this.stompClient && this.connected) {
+      console.log("🔌 Gracefully disconnecting WebSocket");
+      try {
+        if (this.currentSubscription) {
+          this.currentSubscription.unsubscribe();
+          this.currentSubscription = null;
+        }
+        this.stompClient.deactivate();
+      } catch (error) {
+        console.warn("Disconnect warning:", error);
+      }
+    }
+    this._cleanup();
+  }
+
+  _cleanup() {
+    this.connected = false;
+    this.connecting = false;
+    this.connectionPromise = null;
+    this.sessionId = null;
+  }
+
   subscribeToChat(chatId, isGroup = false) {
-    if (!this.connected || !this.stompClient) {
-      console.error("WebSocket not connected");
+    if (!this.connected) {
+      console.error("❌ Cannot subscribe: not connected");
       return null;
     }
 
     if (this.currentSubscription) {
-      console.log("🔄 Unsubscribing from previous chat");
-      this.currentSubscription.unsubscribe();
-      this.currentSubscription = null;
+      try {
+        this.currentSubscription.unsubscribe();
+      } catch (e) {
+        console.error("Unsubscribe error:", e);
+      }
     }
 
     const destination = isGroup
@@ -174,40 +228,29 @@ class WebSocketService {
         destination,
         (message) => {
           try {
-            const messageData = JSON.parse(message.body);
-            console.log("📨 Received message:", messageData);
-
-            this.messageCallbacks.forEach((callback) => {
+            const data = JSON.parse(message.body);
+            this.messageCallbacks.forEach((cb) => {
               try {
-                callback(messageData);
-              } catch (error) {
-                console.error("Message callback error:", error);
+                cb(data);
+              } catch (e) {
+                console.error("Message callback error:", e);
               }
             });
-          } catch (error) {
-            console.error("Error parsing message:", error);
+          } catch (e) {
+            console.error("Message parse error:", e);
           }
         }
       );
-
-      this.subscriptionCallbacks.forEach((callback) => {
-        try {
-          callback(chatId, isGroup);
-        } catch (error) {
-          console.error("Subscription callback error:", error);
-        }
-      });
-
       return this.currentSubscription;
     } catch (error) {
-      console.error("Subscription failed:", error);
+      console.error("❌ Subscribe failed:", error);
       return null;
     }
   }
 
   sendMessage(messageData) {
-    if (!this.connected || !this.stompClient) {
-      console.error("WebSocket not connected");
+    if (!this.connected) {
+      console.error("❌ Cannot send: not connected");
       return false;
     }
 
@@ -219,12 +262,11 @@ class WebSocketService {
       });
       return true;
     } catch (error) {
-      console.error("Failed to send message:", error);
+      console.error("❌ Send failed:", error);
       return false;
     }
   }
 
-  // Your existing callback methods remain unchanged...
   onMessage(callback) {
     this.messageCallbacks.add(callback);
     return () => this.messageCallbacks.delete(callback);
@@ -232,7 +274,7 @@ class WebSocketService {
 
   onConnectionChange(callback) {
     this.connectionCallbacks.add(callback);
-    callback(this.connected); // Call immediately with current status
+    callback(this.connected);
     return () => this.connectionCallbacks.delete(callback);
   }
 
@@ -241,5 +283,6 @@ class WebSocketService {
   }
 }
 
+// ✅ Singleton instance
 const webSocketService = new WebSocketService();
 export default webSocketService;

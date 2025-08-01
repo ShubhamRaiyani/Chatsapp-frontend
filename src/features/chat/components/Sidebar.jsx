@@ -1,7 +1,7 @@
 // chat/components/Sidebar.jsx - Dark Theme Redesign
 import React, { useState } from "react";
 import ChatCard from "./ChatCard";
-import Avatar from "./Avatar";
+import Avatar from "./ui/Avatar";
 
 const Sidebar = ({
   chats = [],
@@ -55,7 +55,7 @@ const Sidebar = ({
   });
 
   const pinnedChats = filteredChats.filter((chat) => chat.pinned);
-  const regularChats = filteredChats.filter((chat) => !chat.pinned);
+  const regularChats = chats;
 
   const getSectionTitle = () => {
     switch (activeSection) {

@@ -94,6 +94,7 @@ export default function App() {
 // Helper to redirect unknown routes contextually
 function AuthStateRedirect() {
   const { isAuthenticated, loading } = useAuth();
+  console.log("AuthStateRedirect", { isAuthenticated, loading });
   if (loading)
     return (
       <div className="w-full h-screen flex items-center justify-center text-lg text-white">

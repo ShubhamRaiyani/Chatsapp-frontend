@@ -1,9 +1,9 @@
 // chat/index.js
 
 // Export all components
-export { default as Avatar } from './components/Avatar';
-export { default as MessageBubble } from './components/MessageBubble';
-export { default as TypingIndicator } from './components/TypingIndicator';
+export { default as Avatar } from './components/ui/Avatar';
+export { default as MessageBubble } from './components/ui/MessageBubble';
+export { default as TypingIndicator } from './components/ui/TypingIndicator';
 export { default as ReadReceipt } from './components/ui/ReadReceipt';
 
 export { default as ChatTopBar } from './components/ChatTopBar';

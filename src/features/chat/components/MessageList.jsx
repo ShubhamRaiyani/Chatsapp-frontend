@@ -1,7 +1,7 @@
 // chat/components/MessageList.jsx
 import React, { useEffect, useRef, useState } from "react";
-import MessageBubble from "./MessageBubble";
-import TypingIndicator from "./TypingIndicator";
+import MessageBubble from "./ui/MessageBubble";
+import TypingIndicator from "./ui/TypingIndicator";
 import ReadReceipt from "./ui/ReadReceipt";
 import { groupMessagesByDate, shouldShowAvatar } from "../utils/messageUtils";
 
