@@ -1,10 +1,6 @@
 import React from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 
-// Context Provider and hook
-// import { AuthProvider } from "./contexts/AuthProvider";
-// import { useAuth } from "./hooks/useAuth" //if separated
-
 import {
   AuthProvider,
   useAuth,
@@ -13,36 +9,63 @@ import {
   OAuthRedirectHandler,
 } from "../features/auth";
 
-// Page Components
-// import AuthPage from "./pages/AuthPage";
 import {
   Dashboard,
   ChatProvider,
   TypingProvider,
   SubscriptionProvider,
-} from "../features/chat"; // Or ChatPage
-// import EmailVerificationPage from "./pages/EmailVerificationPage";
-// import OAuthRedirectHandler from "./pages/OAuthRedirectHandler";
+} from "../features/chat";
+import ErrorBoundary from "../shared/components/ui/ErrorBoundary";
 
-// ProtectedRoute component to guard dashboard
+///////////////////////////////////
+// Authentication gating component
+///////////////////////////////////
 function ProtectedRoute({ children }) {
   const { isAuthenticated, loading } = useAuth();
 
-  // Optionally show loading indicator while checking auth state
-  if (loading)
+  // Show a loading UI while auth state is loading
+  if (loading) {
     return (
-      <div className="w-full h-screen flex items-center justify-center text-lg text-white">
-        Loading...
+      <div className="w-full h-screen flex items-center justify-center bg-gray-900 text-white">
+        <p className="text-lg">Loading authentication...</p>
       </div>
     );
+  }
 
-  // Redirect unauthenticated users to auth page
-  if (!isAuthenticated) return <Navigate to="/auth" replace />;
+  // If not authenticated, redirect to login page
+  if (!isAuthenticated) {
+    return <Navigate to="/auth" replace />;
+  }
 
-  // Allow access if authenticated
+  // Allowed to access the protected component
   return children;
 }
 
+///////////////////////////////////
+// Conditional redirect for unknown routes
+///////////////////////////////////
+function AuthStateRedirect() {
+  const { isAuthenticated, loading } = useAuth();
+  console.log("AuthStateRedirect - isAuthenticated:", isAuthenticated);
+  if (loading) {
+    return (
+      <div className="w-full h-screen flex items-center justify-center bg-gray-900 text-white">
+        <p className="text-lg">Loading authentication...</p>
+      </div>
+    );
+  }
+
+  // Redirect based on authentication state
+  return isAuthenticated ? (
+    <Navigate to="/dashboard" replace />
+  ) : (
+    <Navigate to="/auth" replace />
+  );
+}
+
+///////////////////////////////////
+// Main App component
+///////////////////////////////////
 export default function App() {
   return (
     <AuthProvider>
@@ -50,60 +73,41 @@ export default function App() {
         <TypingProvider>
           <SubscriptionProvider>
             <BrowserRouter>
-              <Routes>
-                {/* Public Auth Page (Login/Register toggle) */}
-                <Route path="/auth" element={<AuthPage />} />
-                <Route
-                  path="/oauth2/redirect"
-                  element={<OAuthRedirectHandler />}
-                />
-                {/* <Route path="/auth2" element={<Dashboard />} /> */}
-                {/* Email Verification page, user arrives here via email link */}
-                <Route
-                  path="/verify-email"
-                  element={<EmailVerificationPage />}
-                />
-                Main Dashboard (protected)
-                <Route
-                  path="/dashboard"
-                  element={
-                    <ProtectedRoute>
-                      <Dashboard />
-                    </ProtectedRoute>
-                  }
-                />
-                {/* Default route logic */}
-                <Route path="/" element={<Navigate to="/dashboard" />} />
-                {/* Catch-all: redirect unknown routes to auth or dashboard based on auth state */}
-                <Route
-                  path="*"
-                  element={
-                    // Decide destination based on user state
-                    <AuthStateRedirect />
-                  }
-                />
-              </Routes>
+              <ErrorBoundary>
+                <Routes>
+                  {/* Public: Login/Register page */}
+                  <Route path="/auth" element={<AuthPage />} />
+
+                  {/* Public: Email verification page */}
+                  <Route path="/verify" element={<EmailVerificationPage />} />
+
+                  {/* OAuth callback processing page */}
+                  <Route
+                    path="/oauth2/redirect"
+                    element={<OAuthRedirectHandler />}
+                  />
+
+                  {/* Protected Dashboard route */}
+                  <Route
+                    path="/dashboard"
+                    element={
+                      <ProtectedRoute>
+                        <Dashboard />
+                      </ProtectedRoute>
+                    }
+                  />
+
+                  {/* Redirect root to dashboard or auth based on state */}
+                  <Route path="/" element={<AuthStateRedirect />} />
+
+                  {/* Catch-all: redirect unknown routes based on auth state */}
+                  <Route path="*" element={<AuthStateRedirect />} />
+                </Routes>
+              </ErrorBoundary>
             </BrowserRouter>
           </SubscriptionProvider>
         </TypingProvider>
       </ChatProvider>
     </AuthProvider>
-  );
-}
-
-// Helper to redirect unknown routes contextually
-function AuthStateRedirect() {
-  const { isAuthenticated, loading } = useAuth();
-  console.log("AuthStateRedirect", { isAuthenticated, loading });
-  if (loading)
-    return (
-      <div className="w-full h-screen flex items-center justify-center text-lg text-white">
-        Loading...
-      </div>
-    );
-  return isAuthenticated ? (
-    <Navigate to="/dashboard" />
-  ) : (
-    <Navigate to="/auth" />
   );
 }

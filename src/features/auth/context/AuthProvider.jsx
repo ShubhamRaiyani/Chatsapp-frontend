@@ -1,23 +1,19 @@
-import React, {
-  useState,
-  useEffect,
-  useCallback,
-} from "react";
-import AuthService from "../services/AuthService";
+import React, { useState, useEffect, useCallback } from "react";
+import AuthService from "../services/AuthService"; // your API calls wrapper
 import AuthContext from "./AuthContext";
 
-
 export function AuthProvider({ children }) {
-  const [user, setUser] = useState(null); // User profile
+  const [user, setUser] = useState(null); // User profile data
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(true); // Loading user profile
   const [error, setError] = useState(null);
 
-  // Load user profile from backend API
+  // Fetch user profile from backend API
   const fetchUserProfile = useCallback(async () => {
     try {
       setLoading(true);
       const profile = await AuthService.getCurrentUser();
+      console.log("Fetched user profile:", profile);
       if (profile) {
         setUser(profile);
         setIsAuthenticated(true);
@@ -27,71 +23,65 @@ export function AuthProvider({ children }) {
         setIsAuthenticated(false);
       }
     } catch (err) {
+      setError(err.message || "Failed to fetch user profile");
       setUser(null);
       setIsAuthenticated(false);
-      setError(null);
-      console.error("Failed to fetch user profile:", err);
     } finally {
       setLoading(false);
     }
   }, []);
 
-  // On mount, check if user is logged in
+  // Initial load of user profile
   useEffect(() => {
     fetchUserProfile();
   }, [fetchUserProfile]);
 
-  // Login method
+  // Login with email/password
   const login = useCallback(
     async (email, password) => {
       setLoading(true);
       setError(null);
       try {
         await AuthService.login(email, password);
-        // Refresh profile after login
         await fetchUserProfile();
-        setLoading(false);
-        setIsAuthenticated(true);
         return { success: true };
       } catch (err) {
         setError(err.message);
-        setLoading(false);
         return { success: false, error: err.message };
+      } finally {
+        setLoading(false);
       }
     },
     [fetchUserProfile]
   );
 
-  // Register method
+  // Register new user
   const register = useCallback(async (username, email, password) => {
     setLoading(true);
     setError(null);
     try {
       const res = await AuthService.register(username, email, password);
-      setLoading(false);
       return {
         success: true,
-        message:
-          res.message || "Registration successful! Please verify your email.",
+        message: res || "Registration successful. Please verify your email.",
       };
     } catch (err) {
       setError(err.message);
-      setLoading(false);
       return { success: false, error: err.message };
+    } finally {
+      setLoading(false);
     }
   }, []);
 
-  // Logout method
+  // Logout user
   const logout = useCallback(async () => {
     try {
       await AuthService.logout();
-    } catch (e) {
+    } catch {
       // ignore errors
-      console.error("Logout failed:", e);
     }
     setUser(null);
     setIsAuthenticated(false);
-    setError(null);
   }, []);
 
   // Verify email
@@ -100,26 +90,32 @@ export function AuthProvider({ children }) {
     setError(null);
     try {
       const res = await AuthService.verifyEmail(token);
-      setLoading(false);
       return res;
     } catch (err) {
       setError(err.message);
-      setLoading(false);
       return { success: false, error: err.message };
+    } finally {
+      setLoading(false);
     }
   }, []);
 
-  // Handle OAuth callback
-  const handleOAuthCallback = useCallback(
-    async () => {
-      // The token is handled by backend, so just refresh profile here
-      await fetchUserProfile();
-      setIsAuthenticated(true);
+  // OAuth login by sending token to backend -> sets cookie + updates user
+  const loginWithToken = useCallback(
+    async (token) => {
+      setLoading(true);
+      setError(null);
+      try {
+        await AuthService.handleOAuthCallback(token);
+        await fetchUserProfile();
+      } catch (err) {
+        setError(err.message || "OAuth login failed");
+      } finally {
+        setLoading(false);
+      }
     },
     [fetchUserProfile]
   );
 
-  // Provide the auth state and methods to children
   return (
     <AuthContext.Provider
       value={{
@@ -131,7 +127,7 @@ export function AuthProvider({ children }) {
         register,
         logout,
         verifyEmail,
-        handleOAuthCallback,
+        loginWithToken,
       }}
     >
       {children}

@@ -1,4 +1,3 @@
-// src/features/auth/pages/EmailVerificationPage.jsx
 import React, { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
@@ -20,15 +19,19 @@ export default function EmailVerificationPage() {
       return;
     }
 
-    // Call backend verification via verifyEmail(token)
+    // Call backend verification via verifyEmail
     verifyEmail(token)
       .then(() => {
         setStatus("success");
         setMessage("Email verified successfully! Redirecting to login...");
-        // Redirect to login page after a delay
-        setTimeout(() => {
+
+        // Redirect after a short delay (3 seconds)
+        const timeoutId = setTimeout(() => {
           navigate("/auth");
         }, 3000);
+
+        // Cleanup timeout on component unmount or params change
+        return () => clearTimeout(timeoutId);
       })
       .catch((error) => {
         setStatus("error");
@@ -75,7 +78,7 @@ export default function EmailVerificationPage() {
               status === "success" ? "text-green-400" : "text-red-500"
             }`}
           >
-            {status === "success" ? "Success!" : "Error"}
+            {status === "success" ? "Success" : "Error"}
           </h1>
           <p>{message}</p>
 

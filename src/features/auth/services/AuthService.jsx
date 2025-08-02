@@ -25,10 +25,10 @@ const AuthService = {
       body: JSON.stringify({ username, email, password }),
     });
     if (!response.ok) {
-      const err = await response.json();
+      const err = await response.text();
       throw new Error(err.message || "Registration failed");
     }
-    return response.json();
+    return response.text();
   },
 
   async logout() {
@@ -44,23 +44,63 @@ const AuthService = {
       credentials: "include",
     });
     if (!response.ok) {
+
       return null;
+      
     }
-    return response.json();
+    
+    return true;
   },
 
-  async handleOAuthCallback({ code, state }) {
+  // async handleOAuthCallback({ code, state }) {
+  //   const response = await fetch(`${API_BASE}/auth/oauth2/callback`, {
+  //     method: "POST",
+  //     headers: { "Content-Type": "application/json" },
+  //     body: JSON.stringify({ code, state }),
+  //     credentials: "include",
+  //   });
+  //   if (!response.ok) {
+  //     const err = await response.json();
+  //     throw new Error(err.message || "OAuth callback failed");
+  //   }
+  //   return response.json();
+  // },
+
+
+  async handleOAuthCallback(token) {
     const response = await fetch(`${API_BASE}/auth/oauth2/callback`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ code, state }),
-      credentials: "include",
+      body: JSON.stringify({ token }),
+      credentials: "include", // Essential for HttpOnly cookies
     });
+
     if (!response.ok) {
       const err = await response.json();
       throw new Error(err.message || "OAuth callback failed");
     }
-    return response.json();
+
+    return true;
+  },
+
+  async verifyEmail(token) {
+    const response = await fetch(`${API_BASE}/auth/verify?token=${encodeURIComponent(token)}`, {
+      method: "GET",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+    });
+
+    if (!response.ok) {
+      const err = await response.json();
+      throw new Error(err.message || "Email verification failed");
+    }
+
+    return true;
+  },
+
+  // Start OAuth flow (redirect to provider)
+  initiateOAuth(provider = "google") {
+    window.location.href = `${API_BASE}/oauth2/authorization/${provider}`;
   },
 };
 
