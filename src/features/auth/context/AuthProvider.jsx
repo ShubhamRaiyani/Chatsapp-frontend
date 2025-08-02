@@ -42,9 +42,9 @@ export function AuthProvider({ children }) {
       setLoading(true);
       setError(null);
       try {
-        await AuthService.login(email, password);
+        const resp = await AuthService.login(email, password);
         await fetchUserProfile();
-        return { success: true };
+        return { success: true , message: resp.message};
       } catch (err) {
         setError(err.message);
         return { success: false, error: err.message };

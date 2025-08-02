@@ -78,7 +78,7 @@ export default function AuthPage() {
       if (token) localStorage.setItem("authToken", token);
       navigate("/dashboard");
     } else {
-      setLoginMessage("Username or password is incorrect.");
+      setLoginMessage(result.message);
     }
   };
 
@@ -89,10 +89,10 @@ export default function AuthPage() {
       formData.password
     );
     if (result.success) {
-      setRegisterMessage("Registration successful! Please verify your email.");
+      setRegisterMessage(result.message);
       setFormData({ username: "", email: "", password: "" });
     } else {
-      setRegisterMessage("Email already taken or already verified.");
+      setRegisterMessage(result.message);
     }
   };
 
