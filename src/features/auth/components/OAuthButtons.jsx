@@ -1,12 +1,14 @@
 import React from "react";
-
+ 
+const API_BASE =
+  import.meta.env.VITE_API_BASE_URL || "http://localhost:8080/api";
 export default function OAuthButtons() {
   const googleLogin = () => {
-    window.location.href = "http://localhost:8080/oauth2/authorization/google";
+    window.location.href = `${API_BASE}/oauth2/authorization/google`;
   };
 
   const githubLogin = () => {
-    window.location.href = "http://localhost:8080/oauth2/authorization/github";
+    window.location.href = `${API_BASE}/oauth2/authorization/github`;
   };
 
   return (
