@@ -1,7 +1,10 @@
 // features/chat/services/WebSocketService.js
 import SockJS from "sockjs-client";
 import { Client } from "@stomp/stompjs";
-
+const API_BASE =
+  import.meta.env.VITE_API_BASE_URL || "http://localhost:8080/api";
+const WS_BASE =
+  import.meta.env.VITE_WS_BASE_URL || "http://localhost:8080/ws";
 class WebSocketService {
   constructor() {
     this.stompClient = null;
@@ -51,12 +54,12 @@ class WebSocketService {
     }
   }
 
-  _createConnection() {
+  _createConnection() { // Create a new WebSocket connection
     return new Promise((resolve, reject) => {
       console.log("🚀 Creating WebSocket connection...");
 
       // ✅ SockJS with credentials for HttpOnly cookies
-      const socket = new SockJS("http://localhost:8080/ws", null, {
+      const socket = new SockJS(WS_BASE, null, {
         withCredentials: true,
       });
 
@@ -146,7 +149,7 @@ class WebSocketService {
     });
   }
 
-  _scheduleReconnect() {
+  _scheduleReconnect() { // Schedule a reconnect with exponential backoff
     this.reconnectAttempts++;
     const delay = Math.min(Math.pow(2, this.reconnectAttempts) * 1000, 30000);
 
@@ -162,7 +165,7 @@ class WebSocketService {
     }, delay);
   }
 
-  async forceDisconnect() {
+  async forceDisconnect() { // Force disconnect and cleanup
     if (this.currentSubscription) {
       try {
         this.currentSubscription.unsubscribe();
@@ -197,7 +200,7 @@ class WebSocketService {
     this._cleanup();
   }
 
-  _cleanup() {
+  _cleanup() { // Reset state
     this.connected = false;
     this.connecting = false;
     this.connectionPromise = null;
