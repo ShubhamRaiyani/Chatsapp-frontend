@@ -1,4 +1,5 @@
-// features/chat/services/ChatAPI.js
+// features/chat/services/ChatAPI.js - Simplified without getChatDetails
+
 const API_BASE =
   import.meta.env.VITE_API_BASE_URL || "http://localhost:8080/api";
 
@@ -22,13 +23,17 @@ const ChatAPI = {
     }
   },
 
-  async createPersonalChat(receiverEmail) {
+  // ✅ REMOVED: getChatDetails - no longer needed since ChatDTO includes all details
+
+  async createPersonalChat(email) {
     try {
       const response = await fetch(`${API_BASE}/chats/personal`, {
         method: "POST",
         credentials: "include", // ✅ HttpOnly cookies
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ receiverEmail }),
+        body: JSON.stringify({
+          receiverEmail: email, // ✅ send directly, not nested in 'body'
+        }),
       });
 
       if (!response.ok) {
@@ -50,7 +55,7 @@ const ChatAPI = {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           name,
-          memberIds: memberEmails,
+          memberEmails: memberEmails,
         }),
       });
 

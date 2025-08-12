@@ -1,4 +1,5 @@
-// chat/containers/ChatArea.jsx
+// chat/containers/ChatArea.jsx - Optimized to use chat object directly
+
 import React, { useState, useEffect } from "react";
 import ChatTopBar from "../components/ChatTopBar";
 import MessageList from "../components/MessageList";
@@ -18,6 +19,7 @@ const ChatArea = ({ chat, currentUserId, onBack, className = "" }) => {
     hasMoreMessages,
     loading,
     connected,
+    // ✅ REMOVED: chatDetails - no longer needed since chat object has all details
   } = useChat(chat?.id);
 
   const { typingUsers, startTyping, stopTyping } = useTyping(chat?.id);
@@ -28,20 +30,45 @@ const ChatArea = ({ chat, currentUserId, onBack, className = "" }) => {
     setIsConnected(connected);
   }, [connected]);
 
-  // Handle sending messages
+  // ✅ SIMPLIFIED: Handle sending messages using receiverEmail directly from chat
   const handleSendMessage = async (messageData) => {
     try {
-      // Get receiver email from chat participants
+      console.log("🔍 ChatArea - Chat object:", chat);
+
       let receiverEmail = null;
+
       if (chat && !chat.isGroup) {
-        receiverEmail = chat.participants?.find(
-          (p) => p.id !== currentUserId
-        )?.email;
+        // ✅ Use receiverEmail directly from chat object (now included in ChatDTO)
+        receiverEmail = chat.receiverEmail;
+
+        console.log("📧 Using receiverEmail from chat object:", receiverEmail);
+
+        // ✅ FALLBACK: Extract from participants if receiverEmail is not set
+        if (!receiverEmail && chat.participantEmails) {
+          // Find the other participant's email (not current user)
+          const currentUserEmail = currentUserId; // Assuming currentUserId is the email
+          receiverEmail = chat.participantEmails.find(
+            (email) => email !== currentUserEmail
+          );
+          console.log(
+            "📧 Fallback: Using receiverEmail from participants:",
+            receiverEmail
+          );
+        }
+
+        if (!receiverEmail) {
+          console.error("❌ No receiverEmail found for direct message");
+          throw new Error("Unable to determine message recipient");
+        }
       }
 
+      // ✅ Send message with the determined receiverEmail
+      console.log("📤 Sending message with receiverEmail:", receiverEmail);
       await sendMessage(messageData.content, receiverEmail);
+      console.log("✅ Message sent successfully");
     } catch (error) {
       console.error("Failed to send message:", error);
+      // You could show a toast notification here
     }
   };
 
@@ -81,59 +108,61 @@ const ChatArea = ({ chat, currentUserId, onBack, className = "" }) => {
   // If no chat is selected, show empty state
   if (!chat) {
     return (
-      <div
-        className={`h-full w-full flex items-center justify-center bg-gray-900 ${className}`}
-      >
+      <div className={`flex-1 flex items-center justify-center ${className}`}>
         <EmptyState
-          title="Select a chat to start messaging"
-          description="Choose a conversation from the sidebar to begin."
+          type="no-chat"
+          title="No Chat Selected"
+          description="Select a conversation from the sidebar to start messaging"
         />
       </div>
     );
   }
 
   return (
-    <div
-      className={`h-full w-full flex flex-col overflow-hidden bg-gray-900 ${className}`}
-    >
-      {/* Chat Header - Fixed height */}
-      <div className="shrink-0 h-16 border-b border-gray-700 bg-gray-800">
-        <ChatTopBar
-          chat={chat}
-          isConnected={isConnected}
-          onStartCall={() => console.log("Starting call...")}
-          onStartVideoCall={() => console.log("Starting video call...")}
-          onShowInfo={() => console.log("Show info...")}
-          onShowMembers={() => console.log("Show members...")}
-          onBack={onBack}
-        />
-      </div>
+    <div className={`flex flex-col h-full bg-gray-800 ${className}`}>
+      {/* Chat Header */}
+      <ChatTopBar
+        chat={chat} // ✅ Chat object already has all details (displayName, etc.)
+        onBack={onBack}
+        className="flex-shrink-0"
+      />
 
-      {/* Messages Area - Flexible, scrollable */}
-      <div className="flex-1 overflow-hidden min-h-0 bg-gray-900">
+      {/* Connection Status */}
+      {!isConnected && (
+        <div className="bg-yellow-600 text-white px-4 py-2 text-sm text-center">
+          ⚠️ Disconnected - Attempting to reconnect...
+        </div>
+      )}
+
+      {/* Messages Area */}
+      <div className="flex-1 flex flex-col min-h-0">
         <MessageList
           messages={messages}
           currentUserId={currentUserId}
+          typingUsers={typingUsers}
           onEditMessage={handleEditMessage}
           onDeleteMessage={handleDeleteMessage}
           onReactToMessage={handleReactToMessage}
           onLoadMore={loadMoreMessages}
           hasMore={hasMoreMessages}
           loading={loading}
-          typingUsers={typingUsers}
+          className="flex-1"
         />
       </div>
 
-      {/* Typing Area - Fixed height */}
-      <div className="shrink-0 p-4 border-t border-gray-700 bg-gray-800">
-        <TypingArea
-          onSendMessage={handleSendMessage}
-          onTyping={handleTyping}
-          onStopTyping={handleStopTyping}
-          disabled={!isConnected}
-          placeholder={!isConnected ? "Reconnecting..." : "Type a message..."}
-        />
-      </div>
+      {/* Typing Area */}
+      <TypingArea
+        onSendMessage={handleSendMessage}
+        onTyping={handleTyping}
+        onStopTyping={handleStopTyping}
+        disabled={!isConnected}
+        placeholder={
+          !isConnected
+            ? "Connecting..."
+            : `Message ${chat.displayName || "User"}...`
+        }
+        className="flex-shrink-0"
+      />
     </div>
   );
 };

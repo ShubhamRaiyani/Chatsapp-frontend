@@ -1,4 +1,4 @@
-// chat/containers/ChatList.jsx
+// chat/containers/ChatList.jsx - FIXED: Multiple issues
 import React, { useState, useEffect } from "react";
 import Sidebar from "../components/Sidebar";
 import { useChat } from "../hooks/useChat";
@@ -6,7 +6,7 @@ import { useChat } from "../hooks/useChat";
 const ChatList = ({
   currentUserId,
   activeChat,
-  activeSection, // ✅ Receive active section
+  activeSection,
   onChatSelect,
   onNewChat,
   onLogout,
@@ -14,45 +14,30 @@ const ChatList = ({
   className = "",
 }) => {
   // ✅ Use filtered chats based on active section
-  const {
-    chats, // Already filtered by section
-    loading,
-    error,
-    refreshChats,
-    chatCounts,
-  } = useChat(null, activeSection);
+  const { chats, loading, error, refreshChats, chatCounts } = useChat(
+    null,
+    activeSection
+  );
 
-  const [searchQuery, setSearchQuery] = useState("");
-
-  // ✅ Filter chats based on search query (already filtered by section)
-  const filteredChats = chats.filter((chat) => {
-    if (!searchQuery.trim()) return true;
-
-    const query = searchQuery.toLowerCase();
-    if (chat.isGroup) {
-      return (
-        chat.displayName?.toLowerCase().includes(query) ||
-        chat.name?.toLowerCase().includes(query)
-      );
-    } else {
-      // For direct chats, search in participants
-      const participant = chat.participants?.find(
-        (p) => p.id !== currentUserId
-      );
-      return (
-        participant?.displayName?.toLowerCase().includes(query) ||
-        participant?.email?.toLowerCase().includes(query) ||
-        participant?.username?.toLowerCase().includes(query)
-      );
+  // ✅ FIXED: Handle new chat creation with proper parameter forwarding
+  const handleNewChat = async (
+    emailOrName,
+    isGroup = false,
+    memberEmails = []
+  ) => {
+    console.log("ChatList handleNewChat:", {
+      emailOrName,
+      isGroup,
+      memberEmails,
+    });
+    try {
+      // ✅ FIX: Forward all parameters correctly to Dashboard
+      await onNewChat(emailOrName, isGroup, memberEmails);
+    } catch (error) {
+      console.error("ChatList: Failed to create chat:", error);
+      // Re-throw to let the modal handle the error display
+      throw error;
     }
-  });
-
-  // Handle new chat creation
-  const handleNewChat = () => {
-    console.log(
-      `Creating new ${activeSection === "groups" ? "group" : "chat"}...`
-    );
-    onNewChat?.();
   };
 
   // Handle chat selection
@@ -64,20 +49,6 @@ const ChatList = ({
   const handleLogout = () => {
     onLogout?.();
   };
-
-  // Refresh chats periodically
-  useEffect(() => {
-    const interval = setInterval(() => {
-      refreshChats();
-    }, 30000);
-
-    return () => clearInterval(interval);
-  }, [refreshChats]);
-
-  // Clear search when section changes
-  useEffect(() => {
-    setSearchQuery("");
-  }, [activeSection]);
 
   // ✅ Get section title and empty state message
   const getSectionInfo = () => {
@@ -107,10 +78,12 @@ const ChatList = ({
 
   if (loading && chats.length === 0) {
     return (
-      <div className={`h-full w-full flex flex-col ${className}`}>
+      <div
+        className={`h-full bg-gray-900 border-r border-gray-700 flex flex-col ${className}`}
+      >
         <div className="flex-1 flex items-center justify-center">
           <div className="text-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-4"></div>
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600 mx-auto mb-2"></div>
             <p className="text-gray-400">
               Loading {sectionInfo.title.toLowerCase()}...
             </p>
@@ -122,12 +95,14 @@ const ChatList = ({
 
   if (error) {
     return (
-      <div className={`h-full w-full flex flex-col ${className}`}>
+      <div
+        className={`h-full bg-gray-900 border-r border-gray-700 flex flex-col ${className}`}
+      >
         <div className="flex-1 flex items-center justify-center">
-          <div className="text-center">
-            <div className="text-red-500 mb-2">
+          <div className="text-center p-8">
+            <div className="w-16 h-16 bg-red-600 bg-opacity-20 rounded-full flex items-center justify-center mx-auto mb-4">
               <svg
-                className="w-12 h-12 mx-auto"
+                className="w-8 h-8 text-red-400"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -140,14 +115,17 @@ const ChatList = ({
                 />
               </svg>
             </div>
-            <p className="text-gray-400 mb-4">
+            <h3 className="text-white font-medium mb-2">
               Failed to load {sectionInfo.title.toLowerCase()}
+            </h3>
+            <p className="text-gray-400 text-sm mb-4">
+              There was an error loading your conversations
             </p>
             <button
               onClick={refreshChats}
-              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
+              className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
             >
-              Retry
+              Try Again
             </button>
           </div>
         </div>
@@ -156,86 +134,17 @@ const ChatList = ({
   }
 
   return (
-    <div className={`h-full w-full flex flex-col overflow-hidden ${className}`}>
-      {/* Section Header */}
-      <div className="shrink-0 p-4 border-b border-gray-700">
-        <div className="flex items-center justify-between mb-2">
-          <h1 className="text-lg font-semibold text-white">
-            {sectionInfo.title}
-          </h1>
-          <span className="text-sm text-gray-400">
-            ({filteredChats.length})
-          </span>
-        </div>
-
-        {/* Search Bar */}
-        <div className="relative">
-          <input
-            type="text"
-            placeholder={`Search ${sectionInfo.title.toLowerCase()}...`}
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full px-3 py-2 pl-10 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-blue-500"
-          />
-          <svg
-            className="absolute left-3 top-2.5 w-5 h-5 text-gray-400"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-            />
-          </svg>
-        </div>
-      </div>
-
-      {/* Chat List or Empty State */}
-      {filteredChats.length === 0 && !loading ? (
-        <div className="flex-1 flex items-center justify-center">
-          <div className="text-center">
-            <div className="text-gray-500 mb-4">
-              <svg
-                className="w-16 h-16 mx-auto"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
-                />
-              </svg>
-            </div>
-            <p className="text-gray-400 mb-4">{sectionInfo.emptyMessage}</p>
-            <button
-              onClick={handleNewChat}
-              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
-            >
-              {sectionInfo.buttonText}
-            </button>
-          </div>
-        </div>
-      ) : (
-        <div className="flex-1 overflow-hidden">
-          <Sidebar
-            chats={filteredChats}
-            activeChat={activeChat}
-            onChatSelect={handleChatSelect}
-            onNewChat={handleNewChat}
-            onLogout={handleLogout}
-            user={user}
-            searchQuery={searchQuery}
-            onSearchChange={setSearchQuery}
-            sectionType={activeSection} // ✅ Pass section type to Sidebar
-          />
-        </div>
-      )}
+    <div className={`h-full flex flex-col ${className}`}>
+      <Sidebar
+        chats={chats}
+        currentUserId={currentUserId}
+        activeChat={activeChat}
+        onChatSelect={handleChatSelect}
+        onNewChat={handleNewChat} // ✅ Pass the fixed handler
+        user={user}
+        activeSection={activeSection}
+        className="flex-1"
+      />
     </div>
   );
 };

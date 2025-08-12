@@ -1,5 +1,4 @@
 // chat/utils/dateUtils.js
-
 // Format time for message timestamps (e.g., "2:30 PM")
 export function formatMessageTime(timestamp) {
   const date = new Date(timestamp);
@@ -186,3 +185,23 @@ export function fromUTC(timestamp) {
   const date = parseTimestamp(timestamp);
   return new Date(date.getTime() - date.getTimezoneOffset() * 60000);
 }
+
+export function formatLastActivityChatCard(isoString) {
+  const date = new Date(isoString); // Parses the ISO string
+
+  // Example: Show "Yesterday", "Today", or full date
+  const now = new Date();
+  const diffMs = now - date;
+  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+  if (diffDays === 0) {
+    // Same day
+    return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  } else if (diffDays === 1) {
+    return "Yesterday";
+  } else {
+    // Show date in short form
+    return date.toLocaleDateString([], { month: "short", day: "numeric" });
+  }
+}
+

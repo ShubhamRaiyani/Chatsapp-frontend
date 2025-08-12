@@ -140,7 +140,7 @@ const MessageBubble = ({
       className={`flex items-end space-x-3 group ${
         isOwn ? "flex-row-reverse space-x-reverse" : ""
       } ${isGrouped ? "mt-1" : "mt-4"}`}
-      onMouseEnter={() => setShowActions(true)}
+      onMouseEnter={() => setShowActions(false)}
       onMouseLeave={() => setShowActions(false)}
     >
       {/* Avatar */}

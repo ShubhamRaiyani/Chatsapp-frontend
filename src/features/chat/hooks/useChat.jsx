@@ -1,9 +1,11 @@
-// features/chat/hooks/useChat.js
+// features/chat/hooks/useChat.js - Optimized without chatDetails
+
 import { useCallback, useEffect, useState, useContext, useMemo } from "react";
 import ChatContext from "../context/ChatContext";
 
 export function useChat(chatId = null, filterType = null) {
   const context = useContext(ChatContext);
+
   if (!context) {
     throw new Error("useChat must be used within a ChatProvider");
   }
@@ -12,6 +14,7 @@ export function useChat(chatId = null, filterType = null) {
   const {
     chats,
     allMessages,
+    // ✅ REMOVED: chatDetails - no longer needed since chat has all details
     loading,
     error,
     connected,
@@ -25,6 +28,7 @@ export function useChat(chatId = null, filterType = null) {
     currentUser,
     refreshChats,
     clearError,
+    // ✅ REMOVED: loadChatDetails - no longer needed
   } = context;
 
   // Local state for this hook instance
@@ -53,7 +57,6 @@ export function useChat(chatId = null, filterType = null) {
   const chatCounts = useMemo(() => {
     const direct = chats.filter((chat) => !chat.isGroup).length;
     const groups = chats.filter((chat) => chat.isGroup).length;
-
     return {
       chats: chats.length,
       direct,
@@ -108,11 +111,14 @@ export function useChat(chatId = null, filterType = null) {
     [chats]
   );
 
-  const getUnreadCount = useCallback((id) => {
-    // TODO: Implement unread count logic when backend supports it
-    
-    return 0;
-  }, []);
+  const getUnreadCount = useCallback(
+    (id) => {
+      // ✅ Now use unreadCount from ChatDTO
+      const chat = chats.find((c) => c.id === id);
+      return chat?.unreadCount || 0;
+    },
+    [chats]
+  );
 
   const getChatMessages = useCallback(
     (id) => allMessages[id] || [],
@@ -135,9 +141,10 @@ export function useChat(chatId = null, filterType = null) {
 
   return {
     // Data
-    chats: filteredChats, // ✅ Filtered chats based on type
-    allChats: chats, // ✅ All chats unfiltered
+    chats: filteredChats, // ✅ Filtered chats based on type (now with full details)
+    allChats: chats, // ✅ All chats unfiltered (now with full details)
     chatCounts, // ✅ Counts by category
+    // ✅ REMOVED: chatDetails - no longer needed since chat has all details
     messages: chatMessages,
     allMessages,
     loading: loading || messageLoading,
@@ -148,17 +155,18 @@ export function useChat(chatId = null, filterType = null) {
     pagination,
 
     // Actions
-    sendMessage,
+    sendMessage, // ✅ Uses receiverEmail directly from chat object
     loadMoreMessages,
     createPersonalChat,
     createGroupChat,
-    selectChat,
+    selectChat, // ✅ Simplified - no separate details loading
     refreshChats,
     clearError,
+    // ✅ REMOVED: loadChatDetails - no longer needed
 
     // Helper functions
     getChatById,
-    getUnreadCount,
+    getUnreadCount, // ✅ Now uses unreadCount from ChatDTO
     getChatMessages,
     getChatsByType, // ✅ Get chats by specific type
 

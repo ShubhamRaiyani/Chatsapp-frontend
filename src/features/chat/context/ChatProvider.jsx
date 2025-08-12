@@ -1,4 +1,5 @@
-// features/chat/contexts/ChatProvider.jsx
+// features/chat/contexts/ChatProvider.jsx - Optimized without chatDetails
+
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import ChatContext from "./ChatContext";
 import ChatAPI from "../services/ChatAPI";
@@ -9,6 +10,7 @@ export function ChatProvider({ children }) {
   // Core state
   const [chats, setChats] = useState([]);
   const [selectedChat, setSelectedChat] = useState(null);
+  // ✅ REMOVED: chatDetails state - no longer needed since ChatDTO includes all details
   const [messages, setMessages] = useState({}); // { chatId: [messages] }
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -31,17 +33,17 @@ export function ChatProvider({ children }) {
     return `${user.email}-${Date.now()}`;
   }, []);
 
-  // Load all chats from API
+  // Load all chats from API (now includes all details)
   const loadChats = useCallback(async () => {
     if (!isAuthenticated || !isMounted.current) return;
 
     try {
       setLoading(true);
       setError(null);
+      // ✅ This now returns full ChatDTO with receiverEmail, lastActivity, etc.
       const chatsData = await ChatAPI.getAllChats();
-
       if (isMounted.current) {
-        console.log("📋 Loaded chats:", chatsData);
+        console.log("📋 Loaded chats with full details:", chatsData);
         setChats(chatsData);
       }
     } catch (err) {
@@ -55,6 +57,8 @@ export function ChatProvider({ children }) {
       }
     }
   }, [isAuthenticated]);
+
+  // ✅ REMOVED: loadChatDetails function - no longer needed
 
   // Load messages for a specific chat with pagination
   const loadMessages = useCallback(
@@ -73,7 +77,6 @@ export function ChatProvider({ children }) {
 
         setMessages((prevMessages) => {
           const existingMessages = prevMessages[chatId] || [];
-
           if (page === 0) {
             // Replace all messages for first page
             return {
@@ -81,7 +84,6 @@ export function ChatProvider({ children }) {
               [chatId]: messagesData.content || [],
             };
           }
-
           // Append messages for pagination (older messages)
           return {
             ...prevMessages,
@@ -111,7 +113,7 @@ export function ChatProvider({ children }) {
     []
   );
 
-  // ✅ MAIN FIX: Single WebSocket connection per user session
+  // ✅ WebSocket connection setup
   useEffect(() => {
     isMounted.current = true;
 
@@ -170,7 +172,6 @@ export function ChatProvider({ children }) {
             if (chatId) {
               setMessages((prev) => {
                 const existing = prev[chatId] || [];
-
                 // Check for duplicate messages
                 const isDuplicate = existing.some(
                   (msg) =>
@@ -192,7 +193,7 @@ export function ChatProvider({ children }) {
                     ? {
                         ...chat,
                         lastActivity: messageData.sentAt,
-                        lastMessage: messageData,
+                        lastMessage: messageData.content, // ✅ Update lastMessage directly
                       }
                     : chat
                 )
@@ -238,23 +239,29 @@ export function ChatProvider({ children }) {
     };
   }, [isAuthenticated, user, generateSessionId, loadChats]);
 
-  // Select a chat and subscribe to its messages
+  // ✅ SIMPLIFIED: Select a chat (no need to load details separately)
   const selectChat = useCallback(
     async (chat) => {
       if (!chat || !connected || !isMounted.current) return;
 
-      console.log("🎯 Selecting chat:", chat);
+      console.log(
+        "🎯 Selecting chat (with full details already loaded):",
+        chat
+      );
       setSelectedChat(chat);
 
-      // Subscribe to WebSocket topic for this chat
+      // ✅ REMOVED: loadChatDetails step - all details are already in chat object
+
+      // ✅ Subscribe to WebSocket topic for this chat
       const subscription = webSocketService.subscribeToChat(
         chat.id,
         chat.isGroup
       );
+
       if (subscription) {
         console.log(`✅ Subscribed to chat: ${chat.id}`);
 
-        // Load messages if not already cached
+        // ✅ Load messages if not already cached
         if (!messages[chat.id]) {
           await loadMessages(chat.id, chat.isGroup, 0);
         }
@@ -264,13 +271,15 @@ export function ChatProvider({ children }) {
           setError("Failed to join chat");
         }
       }
+
+      return chat; // Return the chat object itself (already has all details)
     },
-    [connected, messages, loadMessages]
+    [connected, messages, loadMessages] // ✅ Removed loadChatDetails dependency
   );
 
-  // Send a message via WebSocket
+  // ✅ UPDATED: Send a message using receiverEmail from chat object directly
   const sendMessage = useCallback(
-    async (content, receiverEmail) => {
+    async (content, receiverEmailOverride = null) => {
       if (
         !selectedChat ||
         !connected ||
@@ -284,6 +293,12 @@ export function ChatProvider({ children }) {
 
       setSendingMessage(true);
       try {
+        // ✅ Use receiverEmail directly from chat object or override
+        const receiverEmail =
+          receiverEmailOverride || selectedChat.receiverEmail;
+
+        console.log("📧 Using receiverEmail for message:", receiverEmail);
+
         const messageData = {
           content: content.trim(),
           senderEmail: user.email,
@@ -314,7 +329,7 @@ export function ChatProvider({ children }) {
         }
       }
     },
-    [selectedChat, connected, user]
+    [selectedChat, connected, user] // ✅ Removed chatDetails dependency
   );
 
   // Create a new personal chat
@@ -328,9 +343,9 @@ export function ChatProvider({ children }) {
 
         if (!isMounted.current) return;
 
-        console.log("✅ Created personal chat:", newChat);
+        console.log("✅ Created personal chat (with full details):", newChat);
         setChats((prev) => [newChat, ...prev]);
-        await selectChat(newChat);
+        await selectChat(newChat); // ✅ Chat already has all details
         return newChat;
       } catch (err) {
         if (isMounted.current) {
@@ -354,9 +369,9 @@ export function ChatProvider({ children }) {
 
         if (!isMounted.current) return;
 
-        console.log("✅ Created group chat:", newChat);
+        console.log("✅ Created group chat (with full details):", newChat);
         setChats((prev) => [newChat, ...prev]);
-        await selectChat(newChat);
+        await selectChat(newChat); // ✅ Chat already has all details
         return newChat;
       } catch (err) {
         if (isMounted.current) {
@@ -393,11 +408,12 @@ export function ChatProvider({ children }) {
     ? messagePagination[selectedChat.id]
     : null;
 
-  // Context value provided to all children
+  // ✅ SIMPLIFIED: Context value provided to all children
   const contextValue = {
     // State
-    chats,
-    selectedChat,
+    chats, // ✅ Now includes all details (receiverEmail, lastMessage, etc.)
+    selectedChat, // ✅ Already has all details
+    // ✅ REMOVED: chatDetails - no longer needed
     messages: currentMessages, // Current chat messages
     allMessages: messages, // All messages by chatId
     loading,
@@ -409,12 +425,13 @@ export function ChatProvider({ children }) {
     // Actions
     loadChats,
     refreshChats: loadChats, // Alias for convenience
-    selectChat,
-    sendMessage,
+    selectChat, // ✅ Simplified - no separate details loading
+    sendMessage, // ✅ Uses receiverEmail directly from chat
     createPersonalChat,
     createGroupChat,
     loadMoreMessages,
     clearError,
+    // ✅ REMOVED: loadChatDetails - no longer needed
 
     // Current user
     currentUser: user,

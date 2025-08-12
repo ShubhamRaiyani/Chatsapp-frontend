@@ -97,7 +97,7 @@ const AuthService = {
       
     }
     
-    return true;
+    return await response.json();
   },
 
   // async handleOAuthCallback({ code, state }) {

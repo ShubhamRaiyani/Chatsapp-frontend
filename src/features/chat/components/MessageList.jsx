@@ -1,4 +1,3 @@
-// chat/components/MessageList.jsx
 import React, { useEffect, useRef, useState } from "react";
 import MessageBubble from "./ui/MessageBubble";
 import TypingIndicator from "./ui/TypingIndicator";
@@ -30,14 +29,12 @@ const MessageList = ({
 
   const handleScroll = () => {
     if (!containerRef.current) return;
-
     const { scrollTop, scrollHeight, clientHeight } = containerRef.current;
-    const isAtBottom = scrollHeight - scrollTop <= clientHeight + 100;
+    const atBottom = scrollHeight - scrollTop <= clientHeight + 100;
 
-    setIsAtBottom(isAtBottom);
-    setShowScrollButton(!isAtBottom && messages.length > 10);
+    setIsAtBottom(atBottom);
+    setShowScrollButton(!atBottom && messages.length > 10);
 
-    // Load more messages when scrolled to top
     if (scrollTop === 0 && hasMore && !loading && onLoadMore) {
       onLoadMore();
     }
@@ -67,65 +64,62 @@ const MessageList = ({
     </div>
   );
 
-  const renderMessage = (message, index, dayMessages) => {
-    const isOwn = message.senderId === currentUserId;
-    const prevMessage = dayMessages[index - 1];
-    const nextMessage = dayMessages[index + 1];
-
-    const showAvatar = shouldShowAvatar(
-      message,
-      prevMessage,
-      nextMessage,
-      isOwn
-    );
-    const isGrouped =
-      !showAvatar && prevMessage && prevMessage.senderId === message.senderId;
-
-    return (
-      <MessageBubble
-        key={message.id}
-        message={message}
-        isOwn={isOwn}
-        showAvatar={showAvatar}
-        isGrouped={isGrouped}
-        onEdit={onEditMessage}
-        onDelete={onDeleteMessage}
-        onReact={onReactToMessage}
-      />
-    );
-  };
-
   return (
     <div className={`flex flex-col h-full ${className}`}>
       <div
         ref={containerRef}
         className="flex-1 overflow-y-auto px-4 py-4 space-y-1"
       >
-        {/* Loading indicator for loading more messages */}
+        {/* Loading spinner when fetching more messages */}
         {loading && (
           <div className="flex justify-center py-4">
             <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500"></div>
           </div>
         )}
 
-        {/* Messages grouped by date */}
+        {/* Render messages grouped by date */}
         {groupedMessages.map(({ date, messages: dayMessages }) => (
           <div key={date}>
             {renderDateSeparator(date)}
-            {dayMessages.map((message, index) =>
-              renderMessage(message, index, dayMessages)
-            )}
+            {dayMessages.map((message, index) => {
+              const isOwn = message.senderId === currentUserId;
+              const prevMessage = dayMessages[index - 1];
+              const nextMessage = dayMessages[index + 1];
+              const showAvatar = shouldShowAvatar(
+                message,
+                prevMessage,
+                nextMessage,
+                isOwn
+              );
+              const isGrouped =
+                !showAvatar &&
+                prevMessage &&
+                prevMessage.senderId === message.senderId;
+
+              return (
+                <MessageBubble
+                  key={message.id} // ✅ Correct key placement
+                  message={message}
+                  isOwn={isOwn}
+                  showAvatar={showAvatar}
+                  isGrouped={isGrouped}
+                  onEdit={onEditMessage}
+                  onDelete={onDeleteMessage}
+                  onReact={onReactToMessage}
+                />
+              );
+            })}
           </div>
         ))}
 
         {/* Typing indicator */}
         {typingUsers.length > 0 && <TypingIndicator users={typingUsers} />}
 
-        {/* Read receipts for last message */}
+        {/* Read receipt for last message */}
         {messages.length > 0 && (
           <ReadReceipt
             message={messages[messages.length - 1]}
-            users={[]} // Pass actual users here
+            users={[]} // Replace with actual users if available
           />
         )}
 
