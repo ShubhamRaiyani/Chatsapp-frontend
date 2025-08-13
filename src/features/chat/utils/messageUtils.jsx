@@ -6,7 +6,7 @@ export function groupMessagesByDate(messages) {
   let currentGroup = null;
 
   messages.forEach((message) => {
-    const messageDate = new Date(message.timestamp);
+    const messageDate = new Date(message.sentAt);
     const dateString = formatDateForGrouping(messageDate);
 
     if (!currentGroup || currentGroup.date !== dateString) {

@@ -283,7 +283,7 @@ const MessageBubble = ({
           }`}
         >
           <span className="text-xs text-gray-400">
-            {formatMessageTime(message.timestamp)}
+            {formatMessageTime(message.sentAt)}
           </span>
           {/* Read Receipt */}
           {isOwn && message.readBy && message.readBy.length > 0 && (

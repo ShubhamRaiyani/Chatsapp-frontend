@@ -181,7 +181,7 @@ export function ChatProvider({ children }) {
                 );
 
                 if (!isDuplicate) {
-                  return { ...prev, [chatId]: [messageData, ...existing] };
+                  return { ...prev, [chatId]: [...existing, messageData] };
                 }
                 return prev;
               });
@@ -274,7 +274,7 @@ export function ChatProvider({ children }) {
 
       return chat; // Return the chat object itself (already has all details)
     },
-    [connected, messages, loadMessages] // ✅ Removed loadChatDetails dependency
+    [connected, messages, loadMessages,loadChats] // ✅ Removed loadChatDetails dependency
   );
 
   // ✅ UPDATED: Send a message using receiverEmail from chat object directly

@@ -112,10 +112,10 @@ export default function AuthPage() {
         <div className="flex flex-col items-center mb-6">
           <img
             src={logo}
-            alt="MyApp Logo"
+            alt="Chatsapp Logo"
             className="w-20 h-20 mb-3 shadow-lg"
           />
-          <h2 className="text-2xl font-bold">Welcome to MyApp</h2>
+          <h2 className="text-2xl font-bold">Welcome to Chatsapp</h2>
           <h1 className="text-xl font-semibold mt-1">
             {authMode === "login" ? "Login" : "Create Account"}
           </h1>
