@@ -1,10 +1,9 @@
-// chat/containers/ChatArea.jsx - Fixed (removed refresh handler)
-
 import React, { useState, useEffect } from "react";
 import ChatTopBar from "../components/ChatTopBar";
 import MessageList from "../components/MessageList";
 import TypingArea from "../components/TypingArea";
 import EmptyState from "../components/EmptyState";
+import ChatInfoPanel from "../components/ChatInfoPanel.jsx";
 import { useChat } from "../hooks/useChat";
 import { useTyping } from "../hooks/useTyping";
 import ChatAPI from "../services/ChatAPI";
@@ -20,13 +19,15 @@ const ChatArea = ({ chat, currentUserId, onBack, className = "" }) => {
     loading,
     connected,
     refreshChats,
-    refreshMessages
+    refreshMessages,
   } = useChat(chat?.email);
 
   const { typingUsers, startTyping, stopTyping } = useTyping(chat?.email);
+
   const [isConnected, setIsConnected] = useState(true);
   const [summaryLoading, setSummaryLoading] = useState(false);
   const [summaryError, setSummaryError] = useState(null);
+  const [showChatInfo, setShowChatInfo] = useState(false);
 
   useEffect(() => {
     setIsConnected(connected);
@@ -56,17 +57,19 @@ const ChatArea = ({ chat, currentUserId, onBack, className = "" }) => {
     }
   };
 
-
   const handleSendMessage = async (messageData) => {
     try {
       if (chat && !chat.isGroup) {
         let receiverEmail = chat.receiverEmail;
+
         if (!receiverEmail && chat.participantEmails) {
           receiverEmail = chat.participantEmails.find(
             (email) => email !== currentUserId
           );
         }
+
         if (!receiverEmail) throw new Error("Unable to determine recipient");
+
         await sendMessage(messageData.content, receiverEmail);
       } else if (chat && chat.isGroup) {
         await sendMessage(messageData.content, null);
@@ -76,68 +79,129 @@ const ChatArea = ({ chat, currentUserId, onBack, className = "" }) => {
     }
   };
 
+  // ✅ NEW: Chat info panel handlers
+  const handleShowInfo = () => {
+    setShowChatInfo(true);
+  };
+
+  const handleShowMembers = () => {
+    setShowChatInfo(true);
+  };
+
+  const handleCloseChatInfo = () => {
+    setShowChatInfo(false);
+  };
+
+  // ✅ NEW: Chat action handlers
+  const handleMuteChat = (chatId) => {
+    console.log("Muting chat:", chatId);
+    // Implement mute functionality
+  };
+
+  const handleDeleteChat = (chatId) => {
+    console.log("Deleting chat:", chatId);
+    // Implement delete functionality
+    if (confirm("Are you sure you want to delete this chat?")) {
+      // Call your delete API
+    }
+  };
+
+  const handleLeaveGroup = (chatId) => {
+    console.log("Leaving group:", chatId);
+    // Implement leave group functionality
+    if (confirm("Are you sure you want to leave this group?")) {
+      // Call your leave group API
+    }
+  };
+
   if (!chat) {
     return (
-      <div className={`chat-area ${className}`}>
-        <EmptyState
-          title="Select a Chat"
-          description="Choose a conversation to start messaging"
-          icon="💬"
-        />
-      </div>
+      <EmptyState
+        title="No chat selected"
+        description="Select a conversation to start messaging"
+        className={className}
+      />
     );
   }
 
   return (
-    <div className={`chat-area ${className}`}>
-      <ChatTopBar chat={chat} onBack={onBack} connected={isConnected} />
+    <div className={`flex flex-col h-full relative ${className}`}>
+      {/* Chat Top Bar */}
+      <ChatTopBar
+        chat={chat}
+        onStartCall={() => console.log("Start call")}
+        onStartVideoCall={() => console.log("Start video call")}
+        onShowInfo={handleShowInfo}
+        onShowMembers={handleShowMembers}
+        onBack={onBack}
+        onSummarize={() => handleSummarizeChat(chat.id)}
+        summaryLoading={summaryLoading}
+        className="flex-shrink-0"
+      />
 
-      {summaryError && (
-        <div className="summary-error-banner">
-          <div className="error-content">
-            <span className="error-icon">⚠️</span>
-            <span className="error-text">{summaryError}</span>
-            <button
-              onClick={() => setSummaryError(null)}
-              className="error-close"
-            >
-              ×
-            </button>
+      {/* Connection Status */}
+      {!isConnected && (
+        <div className="bg-yellow-100 dark:bg-yellow-900/20 border-l-4 border-yellow-500 p-3">
+          <div className="flex items-center">
+            <div className="animate-spin rounded-full h-4 w-4 border-2 border-yellow-500 border-t-transparent mr-3"></div>
+            <p className="text-sm text-yellow-700 dark:text-yellow-300">
+              Reconnecting to chat...
+            </p>
           </div>
         </div>
       )}
 
-      <div className="messages-container">
+      {/* Summary Error */}
+      {summaryError && (
+        <div className="bg-red-100 dark:bg-red-900/20 border-l-4 border-red-500 p-3">
+          <p className="text-sm text-red-700 dark:text-red-300">
+            {summaryError}
+          </p>
+        </div>
+      )}
+
+      {/* Message List */}
+      <div className="flex-1 overflow-hidden">
         <MessageList
           messages={messages}
           currentUserId={currentUserId}
           typingUsers={typingUsers}
-          onEditMessage={(id) => console.log("Edit:", id)}
+          onEditMessage={(messageId, newContent) => {
+            console.log("Edit message:", messageId, newContent);
+          }}
           onDeleteMessage={deleteMessage}
           onReactToMessage={reactToMessage}
           onLoadMore={loadMoreMessages}
           hasMore={hasMoreMessages}
           loading={loading}
-          className="messages-list"
-          UsernameofChat={chat.displayName }
+          UsernameofChat={chat.displayName}
+          className="h-full"
         />
       </div>
 
+      {/* Typing Area */}
       <TypingArea
         onSendMessage={handleSendMessage}
-        onTyping={() => startTyping(currentUserId, "You")}
-        onStopTyping={() => stopTyping(currentUserId)}
+        onStartTyping={startTyping}
+        onStopTyping={stopTyping}
         disabled={!isConnected}
         placeholder={
-          isConnected
-            ? `Message ${
-                chat.isGroup ? chat.name : chat.receiverEmail || "user"
-              }...`
-            : "Connecting..."
+          chat.isGroup
+            ? `Message ${chat.displayName}...`
+            : `Message ${chat.displayName}...`
         }
-        chatId={chat.id}
-        onSummarizeChat={handleSummarizeChat}
-        className="typing-area"
+        className="flex-shrink-0"
+      />
+
+      {/* ✅ NEW: Chat Info Panel */}
+      <ChatInfoPanel
+        chat={chat}
+        isOpen={showChatInfo}
+        onClose={handleCloseChatInfo}
+        currentUserId={currentUserId}
+        onMuteChat={handleMuteChat}
+        onDeleteChat={handleDeleteChat}
+        onLeaveGroup={handleLeaveGroup}
       />
     </div>
   );

@@ -1,8 +1,9 @@
 // ========================================
-// TypingArea.jsx - With Chat Summary Feature (AI Button)
+// TypingArea.jsx - Simplified with Tailwind
 // ========================================
 
 import React, { useState, useRef, useEffect } from "react";
+import { Smile, Send } from "lucide-react";
 
 const TypingArea = ({
   onSendMessage,
@@ -11,18 +12,12 @@ const TypingArea = ({
   disabled = false,
   placeholder = "Type a message...",
   className = "",
-  chatId = null,
-  onSummarizeChat, // New prop for summary functionality
 }) => {
   const [message, setMessage] = useState("");
   const [isTyping, setIsTyping] = useState(false);
-  const [attachments, setAttachments] = useState([]);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
-  const [isRecording, setIsRecording] = useState(false);
-  const [isGeneratingSummary, setIsGeneratingSummary] = useState(false);
 
   const textareaRef = useRef(null);
-  const fileInputRef = useRef(null);
   const typingTimeoutRef = useRef(null);
 
   const handleInputChange = (e) => {
@@ -56,34 +51,19 @@ const TypingArea = ({
     }, 1000);
   };
 
-  const handleSummarizeChat = async () => {
-    if (!chatId || isGeneratingSummary) return;
-
-    setIsGeneratingSummary(true);
-    try {
-      await onSummarizeChat?.(chatId);
-    } catch (error) {
-      console.error("Failed to generate summary:", error);
-    } finally {
-      setIsGeneratingSummary(false);
-    }
-  };
-
   const handleSubmit = (e) => {
     e.preventDefault();
     const trimmedMessage = message.trim();
 
-    if (!trimmedMessage && attachments.length === 0) return;
+    if (!trimmedMessage) return;
 
     onSendMessage?.({
       content: trimmedMessage,
-      attachments: attachments,
-      type: attachments.length > 0 ? "media" : "text",
+      type: "text",
     });
 
     // Reset form
     setMessage("");
-    setAttachments([]);
     setIsTyping(false);
     onStopTyping?.();
 
@@ -100,32 +80,6 @@ const TypingArea = ({
     }
   };
 
-  const handleFileSelect = (e) => {
-    const files = Array.from(e.target.files);
-    const newAttachments = files.map((file) => ({
-      id: Date.now() + Math.random(),
-      file,
-      name: file.name,
-      size: formatFileSize(file.size),
-      type: file.type,
-      preview: file.type.startsWith("image/")
-        ? URL.createObjectURL(file)
-        : null,
-    }));
-
-    setAttachments((prev) => [...prev, ...newAttachments]);
-  };
-
-  const removeAttachment = (id) => {
-    setAttachments((prev) => {
-      const attachment = prev.find((att) => att.id === id);
-      if (attachment?.preview) {
-        URL.revokeObjectURL(attachment.preview);
-      }
-      return prev.filter((att) => att.id !== id);
-    });
-  };
-
   const insertEmoji = (emoji) => {
     const textarea = textareaRef.current;
     if (textarea) {
@@ -140,14 +94,6 @@ const TypingArea = ({
       }, 0);
     }
     setShowEmojiPicker(false);
-  };
-
-  const formatFileSize = (bytes) => {
-    if (bytes === 0) return "0 Bytes";
-    const k = 1024;
-    const sizes = ["Bytes", "KB", "MB", "GB"];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
   };
 
   const commonEmojis = [
@@ -171,77 +117,49 @@ const TypingArea = ({
     "😍",
     "🥳",
     "😎",
+    "🤩",
+    "😊",
+    "😋",
+    "😌",
+    "😉",
+    "🙃",
+    "🤗",
+    "🤭",
+    "😴",
+    "🤯",
   ];
+
+  // Close emoji picker when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (
+        showEmojiPicker &&
+        !e.target.closest(".emoji-picker") &&
+        !e.target.closest(".emoji-button")
+      ) {
+        setShowEmojiPicker(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [showEmojiPicker]);
 
   useEffect(() => {
     return () => {
       if (typingTimeoutRef.current) {
         clearTimeout(typingTimeoutRef.current);
       }
-      attachments.forEach((att) => {
-        if (att.preview) {
-          URL.revokeObjectURL(att.preview);
-        }
-      });
     };
   }, []);
 
   return (
-    <div className={`typing-area-container ${className}`}>
-      {/* Attachments Preview */}
-      {attachments.length > 0 && (
-        <div className="attachments-preview">
-          {attachments.map((attachment) => (
-            <div key={attachment.id} className="attachment-item">
-              {attachment.preview ? (
-                <img
-                  src={attachment.preview}
-                  alt=""
-                  className="attachment-image"
-                />
-              ) : (
-                <div className="attachment-file">
-                  <span className="file-icon">📎</span>
-                  <div className="file-info">
-                    <span className="file-name">{attachment.name}</span>
-                    <span className="file-size">{attachment.size}</span>
-                  </div>
-                </div>
-              )}
-              <button
-                type="button"
-                onClick={() => removeAttachment(attachment.id)}
-                className="remove-attachment"
-              >
-                ✕
-              </button>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* Main Input Area */}
-      <form onSubmit={handleSubmit} className="typing-form">
-        <div className="input-wrapper">
-          {/* AI Summary Button - Left Side */}
-          <button
-            type="button"
-            onClick={handleSummarizeChat}
-            disabled={!chatId || isGeneratingSummary || disabled}
-            className={`summary-button ${
-              isGeneratingSummary ? "generating" : ""
-            }`}
-            title="Generate AI Summary (Last 2 Days)"
-          >
-            {isGeneratingSummary ? (
-              <div className="loading-spinner">
-                <div className="spinner"></div>
-              </div>
-            ) : (
-              "AI"
-            )}
-          </button>
-
+    <div
+      className={`relative p-4 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 ${className}`}
+    >
+      {/* Main Input Form */}
+      <form onSubmit={handleSubmit} className="w-full">
+        <div className="flex items-end gap-3 bg-gray-50 dark:bg-gray-700 border-2 border-gray-200 dark:border-gray-600 rounded-3xl px-4 py-3 focus-within:border-blue-500 focus-within:bg-white dark:focus-within:bg-gray-800 transition-all duration-200">
           {/* Text Input */}
           <textarea
             ref={textareaRef}
@@ -250,76 +168,78 @@ const TypingArea = ({
             onKeyDown={handleKeyPress}
             placeholder={placeholder}
             disabled={disabled}
-            className="message-input"
+            className="flex-1 bg-transparent border-none outline-none resize-none 
+             text-gray-900 dark:text-gray-100 
+             placeholder-gray-500 dark:placeholder-gray-400
+             text-base leading-6 
+             min-h-[44px] max-h-[150px] 
+             px-2 py-3"
             rows="1"
           />
 
-          {/* Action Buttons - Right Side */}
-          <div className="action-buttons">
-            {/* File Upload */}
-            <button
-              type="button"
-              onClick={() => fileInputRef.current?.click()}
-              disabled={disabled}
-              className="action-button attachment-button"
-              title="Attach Files"
-            >
-              📎
-            </button>
-
-            {/* Emoji Picker */}
+          {/* Action Buttons */}
+          <div className="flex items-center gap-2">
+            {/* Emoji Button */}
             <button
               type="button"
               onClick={() => setShowEmojiPicker(!showEmojiPicker)}
               disabled={disabled}
-              className="action-button emoji-button"
+              className={`emoji-button flex items-center justify-center w-12 h-12 rounded-full border-none transition-all duration-200 ${
+                showEmojiPicker
+                  ? "bg-yellow-100 dark:bg-yellow-900/30 text-yellow-600 dark:text-yellow-400"
+                  : "bg-transparent text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-600 hover:text-gray-700 dark:hover:text-gray-300"
+              } ${
+                disabled
+                  ? "opacity-50 cursor-not-allowed"
+                  : "cursor-pointer hover:scale-105"
+              }`}
               title="Add Emoji"
             >
-              😊
+              <Smile size={24} />
             </button>
 
             {/* Send Button */}
             <button
               type="submit"
-              disabled={
-                disabled || (!message.trim() && attachments.length === 0)
-              }
-              className="send-button"
+              disabled={disabled || !message.trim()}
+              className={`flex items-center justify-center w-12 h-12 rounded-full transition-all duration-200 ${
+                disabled || !message.trim()
+                  ? "bg-gray-300 dark:bg-gray-600 text-gray-500 cursor-not-allowed"
+                  : "bg-blue-500 hover:bg-blue-600 text-white cursor-pointer hover:scale-105 hover:shadow-lg hover:shadow-blue-500/30"
+              }`}
               title="Send Message"
             >
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                <path
-                  d="m22 2-7 20-4-9-9-4 20-7z"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
+              <Send size={20} />
             </button>
           </div>
         </div>
-
-        {/* Hidden File Input */}
-        <input
-          ref={fileInputRef}
-          type="file"
-          multiple
-          onChange={handleFileSelect}
-          style={{ display: "none" }}
-        />
       </form>
 
       {/* Emoji Picker */}
       {showEmojiPicker && (
-        <div className="emoji-picker">
-          <div className="emoji-grid">
+        <div className="emoji-picker absolute bottom-full right-4 mb-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-xl w-80 max-w-[calc(100vw-32px)] max-h-72 z-50 animate-in slide-in-from-bottom-2 duration-200">
+          {/* Header */}
+          <div className="flex items-center justify-between p-4 border-b border-gray-100 dark:border-gray-700">
+            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+              Choose an emoji
+            </span>
+            <button
+              type="button"
+              onClick={() => setShowEmojiPicker(false)}
+              className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 text-lg p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors"
+            >
+              ✕
+            </button>
+          </div>
+
+          {/* Emoji Grid */}
+          <div className="grid grid-cols-8 gap-1 p-3 max-h-48 overflow-y-auto">
             {commonEmojis.map((emoji) => (
               <button
                 key={emoji}
                 type="button"
                 onClick={() => insertEmoji(emoji)}
-                className="emoji-item"
+                className="flex items-center justify-center w-8 h-8 text-lg hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-all duration-150 hover:scale-125"
               >
                 {emoji}
               </button>
