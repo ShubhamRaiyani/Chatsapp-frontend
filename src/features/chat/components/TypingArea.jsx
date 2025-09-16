@@ -172,10 +172,10 @@ const TypingArea = ({
              text-gray-900 dark:text-gray-100 
              placeholder-gray-500 dark:placeholder-gray-400
              text-base leading-6 
-             min-h-[44px] max-h-[150px] 
+             min-h-[35px] max-h-[100px] 
              px-2 py-3"
             rows="1"
-          />
+          /> 
 
           {/* Action Buttons */}
           <div className="flex items-center gap-2">

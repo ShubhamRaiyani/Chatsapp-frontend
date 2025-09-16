@@ -36,35 +36,29 @@ const ChatTopBar = ({
       const memberCount = chat.participantEmails?.length || 0;
       return `${memberCount} member${memberCount !== 1 ? "s" : ""}`;
     }
-
-    // For direct chats, show the receiver email
     return chat.receiverEmail || "Offline";
   };
 
   const getAvatarSrc = () => {
-    if (chat.isGroup) {
-      return chat.avatar || null;
-    }
     return chat.avatar || null;
   };
 
   const getStatus = () => {
     if (chat.isGroup) return null;
-    return "online"; // You can make this dynamic based on real status
+    return "online";
   };
 
   return (
     <div
       className={`
-      flex items-center justify-between px-4 py-3 
-      bg-white dark:bg-gray-800 
-      border-b border-gray-200 dark:border-gray-700
-      ${className}
-    `}
+        flex items-center justify-between px-4 py-3
+        bg-white dark:bg-gray-800
+        border-b border-gray-200 dark:border-gray-700
+        ${className}
+      `}
     >
       {/* Left Section */}
       <div className="flex items-center gap-3 flex-1 min-w-0">
-        {/* Mobile Back Button */}
         {onBack && (
           <button
             onClick={onBack}
@@ -74,7 +68,6 @@ const ChatTopBar = ({
           </button>
         )}
 
-        {/* Chat Avatar */}
         <Avatar
           src={getAvatarSrc()}
           name={getChatTitle()}
@@ -82,7 +75,6 @@ const ChatTopBar = ({
           status={getStatus()}
         />
 
-        {/* Chat Info */}
         <div className="flex-1 min-w-0">
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white truncate">
             {getChatTitle()}
@@ -96,15 +88,15 @@ const ChatTopBar = ({
                 <div
                   className="w-1 h-1 bg-current rounded-full animate-bounce"
                   style={{ animationDelay: "0ms" }}
-                ></div>
+                />
                 <div
                   className="w-1 h-1 bg-current rounded-full animate-bounce"
                   style={{ animationDelay: "150ms" }}
-                ></div>
+                />
                 <div
                   className="w-1 h-1 bg-current rounded-full animate-bounce"
                   style={{ animationDelay: "300ms" }}
-                ></div>
+                />
               </div>
               <span>typing...</span>
             </div>
@@ -112,42 +104,40 @@ const ChatTopBar = ({
         </div>
       </div>
 
-      {/* Right Section - Action Buttons */}
+      {/* Right Section */}
       <div className="flex items-center gap-2">
-  
+        <button className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition-colors">
+          <Search size={20} className="text-gray-600 dark:text-gray-400" />
+        </button>
 
-        {/* Summarize Button */}
         {onSummarize && (
           <button
             onClick={() => onSummarize(chat.id)}
             disabled={summaryLoading}
             className="
-    relative p-3 rounded-full
-    bg-gradient-to-r from-pink-500 via-purple-500 to-blue-500
-    text-white shadow-lg
-    transition-all duration-300
-    hover:scale-110 hover:shadow-2xl
-    disabled:opacity-50 disabled:cursor-not-allowed
-  "
+              relative p-3 rounded-full
+              bg-gradient-to-r from-pink-500 via-purple-500 to-blue-500
+              text-white shadow-lg
+              transition-all duration-300
+              hover:scale-110 hover:shadow-2xl
+              disabled:opacity-50 disabled:cursor-not-allowed
+            "
             title="Generate Chat Summary"
           >
             {summaryLoading ? (
-              <div className="animate-spin w-5 h-5 border-2 border-white border-t-transparent rounded-full"></div>
+              <div className="animate-spin w-5 h-5 border-2 border-white border-t-transparent rounded-full" />
             ) : (
               <Sparkles
                 size={28}
                 className="text-white drop-shadow-[0_0_10px_rgba(255,255,255,0.9)]"
               />
             )}
-
-            {/* Glowing aura behind the button */}
             {!summaryLoading && (
-              <span className="absolute inset-0 rounded-full bg-gradient-to-r from-pink-400 via-purple-400 to-blue-400 opacity-70 blur-xl animate-pulse -z-10"></span>
+              <span className="absolute inset-0 rounded-full bg-gradient-to-r from-pink-400 via-purple-400 to-blue-400 opacity-70 blur-xl animate-pulse -z-10" />
             )}
           </button>
         )}
 
-        {/* Info/Members Button */}
         <button
           onClick={chat.isGroup ? onShowMembers : onShowInfo}
           className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition-colors"
@@ -161,7 +151,7 @@ const ChatTopBar = ({
         </button>
       </div>
 
-      {/* Backdrop for dropdown */}
+      {/* Dropdown Backdrop (unused here but kept for parity) */}
       {showDropdown && (
         <div
           className="fixed inset-0 z-40"

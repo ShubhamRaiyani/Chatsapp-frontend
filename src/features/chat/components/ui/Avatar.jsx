@@ -114,7 +114,7 @@ const Avatar = ({
       </div>
 
       {/* Status Indicator */}
-      {showStatus && status && (
+      {/* {showStatus && status && (
         <div
           className={`absolute bottom-0 right-0 ${statusSizeClasses[size]} ${
             statusColors[status] || statusColors.offline
@@ -122,14 +122,14 @@ const Avatar = ({
             status === "online" ? "animate-pulse" : ""
           }`}
         />
-      )}
+      )} */}
 
       {/* Online Pulse Effect */}
-      {showStatus && status === "online" && (
+      {/* {showStatus && status === "online" && (
         <div
           className={`absolute bottom-0 right-0 ${statusSizeClasses[size]} bg-[#22C55E] rounded-full animate-ping opacity-75`}
         />
-      )}
+      )} */}
     </div>
   );
 };

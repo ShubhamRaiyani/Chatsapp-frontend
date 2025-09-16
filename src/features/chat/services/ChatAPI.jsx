@@ -118,7 +118,7 @@ const ChatAPI = {
       const response = await fetch(`${API_BASE}/summary/${chatId}`, {
         method: "GET",
         credentials: "include", // ✅ HttpOnly cookies
-        headers: { "Content-Type": "application/json" },  
+        headers: { "Content-Type": "application/json" },
       });
 
       if (!response.ok) {
@@ -132,6 +132,27 @@ const ChatAPI = {
       return summary;
     } catch (error) {
       console.error("Error generating chat summary:", error);
+      throw error;
+    }
+  },
+
+  // Add this method to your ChatAPI.jsx
+
+  async leaveGroup(groupId) {
+    try {
+      const response = await fetch(`${API_BASE}/chats/group/${groupId}/leave`, {
+        method: "DELETE",
+        credentials: "include", // ✅ HttpOnly cookies
+        headers: { "Content-Type": "application/json" },
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to leave group: ${response.status}`);
+      }
+
+      return await response.text(); // Returns success message
+    } catch (error) {
+      console.error("Error leaving group:", error);
       throw error;
     }
   },

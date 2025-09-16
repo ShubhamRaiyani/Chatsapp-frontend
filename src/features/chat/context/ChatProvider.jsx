@@ -419,6 +419,57 @@ export function ChatProvider({ children }) {
     }
   }, []);
 
+  const leaveGroup = useCallback(
+    async (groupId) => {
+      if (!isAuthenticated || !isMounted.current) return;
+
+      try {
+        console.log("🚪 Leaving group:", groupId);
+
+        // Call the API to leave the group
+        const response = await ChatAPI.leaveGroup(groupId);
+
+        if (!isMounted.current) return;
+
+        console.log("✅ Successfully left group:", response);
+
+        // Remove the group from chats list
+        setChats((prev) => prev.filter((chat) => chat.id !== groupId));
+
+        // Clear messages for this group
+        setMessages((prev) => {
+          const newMessages = { ...prev };
+          delete newMessages[groupId];
+          return newMessages;
+        });
+
+        // Clear pagination info
+        setMessagePagination((prev) => {
+          const newPagination = { ...prev };
+          delete newPagination[groupId];
+          return newPagination;
+        });
+
+        // If this was the selected chat, clear selection
+        if (selectedChat?.id === groupId) {
+          setSelectedChat(null);
+        }
+
+        // Refresh chats to get updated list
+        await loadChats();
+
+        return response;
+      } catch (err) {
+        if (isMounted.current) {
+          console.error("Error leaving group:", err);
+          setError("Failed to leave group");
+        }
+        throw err;
+      }
+    },
+    [isAuthenticated, selectedChat, loadChats]
+  );
+
   // Get current messages and pagination for context
   const currentMessages = selectedChat ? messages[selectedChat.id] || [] : [];
   const currentPagination = selectedChat
@@ -450,6 +501,7 @@ export function ChatProvider({ children }) {
     createGroupChat,
     loadMoreMessages,
     clearError,
+    leaveGroup,
     // ✅ REMOVED: loadChatDetails - no longer needed
 
     // Current user

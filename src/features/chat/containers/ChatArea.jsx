@@ -20,6 +20,7 @@ const ChatArea = ({ chat, currentUserId, onBack, className = "" }) => {
     connected,
     refreshChats,
     refreshMessages,
+    leaveGroup,
   } = useChat(chat?.email);
 
   const { typingUsers, startTyping, stopTyping } = useTyping(chat?.email);
@@ -106,13 +107,19 @@ const ChatArea = ({ chat, currentUserId, onBack, className = "" }) => {
     }
   };
 
-  const handleLeaveGroup = (chatId) => {
-    console.log("Leaving group:", chatId);
-    // Implement leave group functionality
-    if (confirm("Are you sure you want to leave this group?")) {
-      // Call your leave group API
+  const handleLeaveGroup = async (groupId) => {
+    try {
+      await leaveGroup(groupId);
+      // Optionally navigate back or show success message
+      if (onBack) {
+        onBack(); // Go back to chat list after leaving
+      }
+    } catch (error) {
+      console.error("Failed to leave group:", error);
+      throw error; // Re-throw so ChatTopBar can handle the error display
     }
   };
+
 
   if (!chat) {
     return (
@@ -135,6 +142,7 @@ const ChatArea = ({ chat, currentUserId, onBack, className = "" }) => {
         onShowMembers={handleShowMembers}
         onBack={onBack}
         onSummarize={() => handleSummarizeChat(chat.id)}
+        onLeaveGroup={handleLeaveGroup}
         summaryLoading={summaryLoading}
         className="flex-shrink-0"
       />

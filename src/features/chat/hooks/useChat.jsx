@@ -13,7 +13,7 @@ export function useChat(chatId = null, filterType = null) {
   // Destructure context values
   const {
     chats,
-      allMessages,
+    allMessages,
     // ✅ REMOVED: chatDetails - no longer needed since chat has all details
     loading,
     error,
@@ -22,6 +22,7 @@ export function useChat(chatId = null, filterType = null) {
     pagination,
     loadMoreMessages: loadMoreFromProvider,
     sendMessage: sendFromProvider,
+    leaveGroup : leaveGroupFromProvider,
     createPersonalChat,
     createGroupChat,
     selectChat,
@@ -150,6 +151,17 @@ export function useChat(chatId = null, filterType = null) {
     },
     [chats]
   );
+  const leaveGroup = useCallback(
+    async (groupId) => {
+      try {
+        return await leaveGroupFromProvider(groupId);
+      } catch (err) {
+        console.error("Failed to leave group:", err);
+        throw err;
+      }
+    },
+    [leaveGroupFromProvider]
+  );
 
   return {
     // Data
@@ -160,6 +172,7 @@ export function useChat(chatId = null, filterType = null) {
     messages: chatMessages,
     allMessages,
     loading: loading || messageLoading,
+    leaveGroup,
     error,
     connected,
     hasMoreMessages,
