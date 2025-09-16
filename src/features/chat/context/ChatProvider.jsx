@@ -60,13 +60,21 @@ export function ChatProvider({ children }) {
 
   // ✅ REMOVED: loadChatDetails function - no longer needed
 
-  // Load messages for a specific chat with pagination
+  // ===== FIXED CHATPROVIDER - Handle ASC Pagination Correctly =====
+
+  // In your ChatProvider.jsx - Update loadMessages function:
+
+  // ===== FIXED CHATPROVIDER - Handle ASC Pagination Correctly =====
+
+  // In your ChatProvider.jsx - Update loadMessages function:
+
   const loadMessages = useCallback(
     async (chatId, isGroup = false, page = 0) => {
       if (!chatId || !isMounted.current) return;
 
       try {
         console.log(`📥 Loading messages for chat ${chatId}, page ${page}`);
+
         const messagesData = isGroup
           ? await ChatAPI.getMessagesForGroup(chatId, page, 20)
           : await ChatAPI.getMessagesForChat(chatId, page, 20);
@@ -77,17 +85,25 @@ export function ChatProvider({ children }) {
 
         setMessages((prevMessages) => {
           const existingMessages = prevMessages[chatId] || [];
+
           if (page === 0) {
-            // Replace all messages for first page
+            // ✅ First page: Replace all messages and REVERSE them
+            // Since backend sends ASC, we reverse to show newest at bottom
+            const reversedMessages = [
+              ...(messagesData.content || []),
+            ].reverse();
             return {
               ...prevMessages,
-              [chatId]: messagesData.content || [],
+              [chatId]: reversedMessages,
             };
           }
-          // Append messages for pagination (older messages)
+
+          // ✅ Pagination: Prepend older messages to the BEGINNING
+          // Since we're loading older messages (ASC order), they go at the start
+          const olderMessages = [...(messagesData.content || [])].reverse();
           return {
             ...prevMessages,
-            [chatId]: [...existingMessages, ...(messagesData.content || [])],
+            [chatId]: [...olderMessages, ...existingMessages], // Older messages first
           };
         });
 
@@ -111,6 +127,15 @@ export function ChatProvider({ children }) {
       }
     },
     []
+  );
+  const refreshMessages = useCallback(
+    async (chatId, isGroup = false) => {
+      if (!chatId || !isMounted.current) return;
+
+      console.log(`🔄 Refreshing messages for chat ${chatId}`);
+      await loadMessages(chatId, isGroup, 0); // Reload page 0 (latest messages)
+    },
+    [loadMessages]
   );
 
   // ✅ WebSocket connection setup
@@ -274,62 +299,54 @@ export function ChatProvider({ children }) {
 
       return chat; // Return the chat object itself (already has all details)
     },
-    [connected, messages, loadMessages,loadChats] // ✅ Removed loadChatDetails dependency
+    [connected, messages, loadMessages, loadChats] // ✅ Removed loadChatDetails dependency
   );
 
   // ✅ UPDATED: Send a message using receiverEmail from chat object directly
   const sendMessage = useCallback(
     async (content, receiverEmailOverride = null) => {
-      if (
-        !selectedChat ||
-        !connected ||
-        !user ||
-        !content.trim() ||
-        !isMounted.current
-      ) {
+      if (!selectedChat || !connected || !user || !content.trim()) {
         console.warn("Cannot send message: missing requirements");
         return false;
       }
 
       setSendingMessage(true);
       try {
-        // ✅ Use receiverEmail directly from chat object or override
-        const receiverEmail =
-          receiverEmailOverride || selectedChat.receiverEmail;
+        let messageData;
 
-        console.log("📧 Using receiverEmail for message:", receiverEmail);
+        if (selectedChat.isGroup) {
+          // ✅ Group message payload
+          messageData = {
+            content: content.trim(),
+            groupId: selectedChat.id,
+            messageType: "TEXT",
+          };
+        } else {
+          // ✅ Direct message payload
+          const receiverEmail =
+            receiverEmailOverride || selectedChat.receiverEmail;
 
-        const messageData = {
-          content: content.trim(),
-          senderEmail: user.email,
-          receiverEmail: receiverEmail,
-          chatId: selectedChat.isGroup ? null : selectedChat.id,
-          groupId: selectedChat.isGroup ? selectedChat.id : null,
-          messageType: "TEXT",
-        };
+          messageData = {
+            content: content.trim(),
+            chatId: selectedChat.id,
+            receiverEmail: receiverEmail,
+            messageType: "TEXT",
+          };
+        }
 
         console.log("📤 Sending message:", messageData);
         const success = webSocketService.sendMessage(messageData);
-
-        if (success) {
-          console.log("✅ Message sent successfully");
-          return true;
-        } else {
-          throw new Error("WebSocket send failed");
-        }
+        return success;
       } catch (err) {
-        if (isMounted.current) {
-          console.error("Error sending message:", err);
-          setError("Failed to send message");
-        }
+        console.error("Error sending message:", err);
+        setError("Failed to send message");
         return false;
       } finally {
-        if (isMounted.current) {
-          setSendingMessage(false);
-        }
+        setSendingMessage(false);
+        loadChats();
       }
     },
-    [selectedChat, connected, user] // ✅ Removed chatDetails dependency
+    [selectedChat, connected, user]
   );
 
   // Create a new personal chat
@@ -421,6 +438,8 @@ export function ChatProvider({ children }) {
     connected,
     sendingMessage,
     pagination: currentPagination,
+
+    refreshMessages,
 
     // Actions
     loadChats,

@@ -1,4 +1,4 @@
-// chat/containers/ChatArea.jsx - Optimized to use chat object directly
+// chat/containers/ChatArea.jsx - Fixed (removed refresh handler)
 
 import React, { useState, useEffect } from "react";
 import ChatTopBar from "../components/ChatTopBar";
@@ -7,161 +7,137 @@ import TypingArea from "../components/TypingArea";
 import EmptyState from "../components/EmptyState";
 import { useChat } from "../hooks/useChat";
 import { useTyping } from "../hooks/useTyping";
+import ChatAPI from "../services/ChatAPI";
 
 const ChatArea = ({ chat, currentUserId, onBack, className = "" }) => {
   const {
     messages,
     sendMessage,
-    editMessage,
     deleteMessage,
     reactToMessage,
     loadMoreMessages,
     hasMoreMessages,
     loading,
     connected,
-    // ✅ REMOVED: chatDetails - no longer needed since chat object has all details
-  } = useChat(chat?.id);
+    refreshChats,
+    refreshMessages
+  } = useChat(chat?.email);
 
-  const { typingUsers, startTyping, stopTyping } = useTyping(chat?.id);
+  const { typingUsers, startTyping, stopTyping } = useTyping(chat?.email);
   const [isConnected, setIsConnected] = useState(true);
+  const [summaryLoading, setSummaryLoading] = useState(false);
+  const [summaryError, setSummaryError] = useState(null);
 
-  // Update connection status
   useEffect(() => {
     setIsConnected(connected);
   }, [connected]);
 
-  // ✅ SIMPLIFIED: Handle sending messages using receiverEmail directly from chat
+  const handleSummarizeChat = async (chatId) => {
+    if (!chatId || summaryLoading) return;
+
+    setSummaryLoading(true);
+    setSummaryError(null);
+
+    try {
+      const summary = await ChatAPI.generateChatSummary(chatId);
+
+      // ✅ REFRESH MESSAGES TO SHOW NEW SUMMARY
+      await refreshMessages(chatId, chat?.isGroup);
+
+      // Optional: Also refresh chats list to update lastMessage
+      setTimeout(() => refreshChats?.(), 500);
+
+      return summary;
+    } catch (error) {
+      setSummaryError(error.message);
+      throw error;
+    } finally {
+      setSummaryLoading(false);
+    }
+  };
+
+
   const handleSendMessage = async (messageData) => {
     try {
-      console.log("🔍 ChatArea - Chat object:", chat);
-
-      let receiverEmail = null;
-
       if (chat && !chat.isGroup) {
-        // ✅ Use receiverEmail directly from chat object (now included in ChatDTO)
-        receiverEmail = chat.receiverEmail;
-
-        console.log("📧 Using receiverEmail from chat object:", receiverEmail);
-
-        // ✅ FALLBACK: Extract from participants if receiverEmail is not set
+        let receiverEmail = chat.receiverEmail;
         if (!receiverEmail && chat.participantEmails) {
-          // Find the other participant's email (not current user)
-          const currentUserEmail = currentUserId; // Assuming currentUserId is the email
           receiverEmail = chat.participantEmails.find(
-            (email) => email !== currentUserEmail
-          );
-          console.log(
-            "📧 Fallback: Using receiverEmail from participants:",
-            receiverEmail
+            (email) => email !== currentUserId
           );
         }
-
-        if (!receiverEmail) {
-          console.error("❌ No receiverEmail found for direct message");
-          throw new Error("Unable to determine message recipient");
-        }
+        if (!receiverEmail) throw new Error("Unable to determine recipient");
+        await sendMessage(messageData.content, receiverEmail);
+      } else if (chat && chat.isGroup) {
+        await sendMessage(messageData.content, null);
       }
-
-      // ✅ Send message with the determined receiverEmail
-      console.log("📤 Sending message with receiverEmail:", receiverEmail);
-      await sendMessage(messageData.content, receiverEmail);
-      console.log("✅ Message sent successfully");
     } catch (error) {
       console.error("Failed to send message:", error);
-      // You could show a toast notification here
     }
   };
 
-  // Handle editing messages
-  const handleEditMessage = async (messageId) => {
-    console.log("Edit message:", messageId);
-    // TODO: Implement edit functionality
-  };
-
-  // Handle deleting messages
-  const handleDeleteMessage = async (messageId) => {
-    try {
-      await deleteMessage(messageId);
-    } catch (error) {
-      console.error("Failed to delete message:", error);
-    }
-  };
-
-  // Handle message reactions
-  const handleReactToMessage = async (messageId, emoji) => {
-    try {
-      await reactToMessage(messageId, emoji);
-    } catch (error) {
-      console.error("Failed to react to message:", error);
-    }
-  };
-
-  // Handle typing indicators
-  const handleTyping = () => {
-    startTyping(currentUserId, "You");
-  };
-
-  const handleStopTyping = () => {
-    stopTyping(currentUserId);
-  };
-
-  // If no chat is selected, show empty state
   if (!chat) {
     return (
-      <div className={`flex-1 flex items-center justify-center ${className}`}>
+      <div className={`chat-area ${className}`}>
         <EmptyState
-          type="no-chat"
-          title="No Chat Selected"
-          description="Select a conversation from the sidebar to start messaging"
+          title="Select a Chat"
+          description="Choose a conversation to start messaging"
+          icon="💬"
         />
       </div>
     );
   }
 
   return (
-    <div className={`flex flex-col h-full bg-gray-800 ${className}`}>
-      {/* Chat Header */}
-      <ChatTopBar
-        chat={chat} // ✅ Chat object already has all details (displayName, etc.)
-        onBack={onBack}
-        className="flex-shrink-0"
-      />
+    <div className={`chat-area ${className}`}>
+      <ChatTopBar chat={chat} onBack={onBack} connected={isConnected} />
 
-      {/* Connection Status */}
-      {!isConnected && (
-        <div className="bg-yellow-600 text-white px-4 py-2 text-sm text-center">
-          ⚠️ Disconnected - Attempting to reconnect...
+      {summaryError && (
+        <div className="summary-error-banner">
+          <div className="error-content">
+            <span className="error-icon">⚠️</span>
+            <span className="error-text">{summaryError}</span>
+            <button
+              onClick={() => setSummaryError(null)}
+              className="error-close"
+            >
+              ×
+            </button>
+          </div>
         </div>
       )}
 
-      {/* Messages Area */}
-      <div className="flex-1 flex flex-col min-h-0">
+      <div className="messages-container">
         <MessageList
           messages={messages}
           currentUserId={currentUserId}
           typingUsers={typingUsers}
-          onEditMessage={handleEditMessage}
-          onDeleteMessage={handleDeleteMessage}
-          onReactToMessage={handleReactToMessage}
+          onEditMessage={(id) => console.log("Edit:", id)}
+          onDeleteMessage={deleteMessage}
+          onReactToMessage={reactToMessage}
           onLoadMore={loadMoreMessages}
           hasMore={hasMoreMessages}
           loading={loading}
-          className="flex-1"
+          className="messages-list"
+          UsernameofChat={chat.displayName }
         />
       </div>
 
-      {/* Typing Area */}
       <TypingArea
         onSendMessage={handleSendMessage}
-        onTyping={handleTyping}
-        onStopTyping={handleStopTyping}
+        onTyping={() => startTyping(currentUserId, "You")}
+        onStopTyping={() => stopTyping(currentUserId)}
         disabled={!isConnected}
         placeholder={
-          !isConnected
-            ? "Connecting..."
-            : `Message ${chat.displayName || "User"}...`
+          isConnected
+            ? `Message ${
+                chat.isGroup ? chat.name : chat.receiverEmail || "user"
+              }...`
+            : "Connecting..."
         }
-        className="flex-shrink-0"
+        chatId={chat.id}
+        onSummarizeChat={handleSummarizeChat}
+        className="typing-area"
       />
     </div>
   );

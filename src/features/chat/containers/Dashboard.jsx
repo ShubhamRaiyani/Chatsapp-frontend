@@ -201,7 +201,7 @@ const Dashboard = ({ className = "" }) => {
         {activeChat ? (
           <ChatArea
             chat={activeChat}
-            currentUserId={user?.id}
+            currentUserId={user?.email}
             onBack={handleBackToChatList}
             className="flex-1"
           />

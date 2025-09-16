@@ -1,4 +1,4 @@
-// features/chat/services/ChatAPI.js - Simplified without getChatDetails
+// features/chat/services/ChatAPI.js - With Chat Summary Feature
 
 const API_BASE =
   import.meta.env.VITE_API_BASE_URL || "http://localhost:8080/api";
@@ -22,8 +22,6 @@ const ChatAPI = {
       throw error;
     }
   },
-
-  // ✅ REMOVED: getChatDetails - no longer needed since ChatDTO includes all details
 
   async createPersonalChat(email) {
     try {
@@ -110,6 +108,30 @@ const ChatAPI = {
       return await response.json();
     } catch (error) {
       console.error("Error fetching group messages:", error);
+      throw error;
+    }
+  },
+
+  // ✅ NEW: Generate Chat Summary
+  async generateChatSummary(chatId) {
+    try {
+      const response = await fetch(`${API_BASE}/summary/${chatId}`, {
+        method: "GET",
+        credentials: "include", // ✅ HttpOnly cookies
+        headers: { "Content-Type": "application/json" },  
+      });
+
+      if (!response.ok) {
+        if (response.status === 404) {
+          throw new Error("No messages found in the last 2 days to summarize");
+        }
+        throw new Error(`Failed to generate summary: ${await response.text()}`);
+      }
+
+      const summary = await response.text(); // Summary returns as plain text
+      return summary;
+    } catch (error) {
+      console.error("Error generating chat summary:", error);
       throw error;
     }
   },

@@ -82,15 +82,15 @@ export default function AuthPage() {
     }
   };
 
-  const handleRegister = async () => {
+  const handleRegister = async () => { 
     const result = await register(
       formData.username,
       formData.email,
-      formData.password
+      formData.password 
     );
     if (result.success) {
       setRegisterMessage(result.message);
-      setFormData({ username: "", email: "", password: "" });
+      setFormData({ username: "", email: "", password: "" }); 
     } else {
       setRegisterMessage(result.message);
     }

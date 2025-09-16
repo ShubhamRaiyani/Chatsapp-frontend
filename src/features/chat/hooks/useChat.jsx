@@ -13,7 +13,7 @@ export function useChat(chatId = null, filterType = null) {
   // Destructure context values
   const {
     chats,
-    allMessages,
+      allMessages,
     // ✅ REMOVED: chatDetails - no longer needed since chat has all details
     loading,
     error,
@@ -28,6 +28,7 @@ export function useChat(chatId = null, filterType = null) {
     currentUser,
     refreshChats,
     clearError,
+    refreshMessages,
     // ✅ REMOVED: loadChatDetails - no longer needed
   } = context;
 
@@ -88,11 +89,22 @@ export function useChat(chatId = null, filterType = null) {
 
   // Send message wrapper
   const sendMessage = useCallback(
-    async (content, receiverEmail) => {
+    async (content, receiverEmail = null) => {
       return await sendFromProvider(content, receiverEmail);
     },
     [sendFromProvider]
   );
+  // const sendMessage = useCallback(
+  //   async (content, receiverEmail, otherParticipantEmails = []) => {
+  //     console.log("🔧 useChat sendMessage called with:", {
+  //       content,
+  //       receiverEmail,
+  //       otherParticipantEmails,
+  //     });
+  //     return await sendFromProvider(content, receiverEmail, otherParticipantEmails);
+  //   },
+  //   [sendFromProvider]
+  // );
 
   // Update hasMoreMessages state as pagination changes
   useEffect(() => {
@@ -173,6 +185,7 @@ export function useChat(chatId = null, filterType = null) {
     // Current user info
     currentUser,
 
+    refreshMessages,
     // Raw context access if needed
     context,
   };

@@ -99,6 +99,26 @@ const AuthService = {
     
     return await response.json();
   },
+  async getUserById(userId) {
+    const response = await fetch(`${API_BASE}/users/${userId}`, {
+      credentials: "include",
+    });
+    if (!response.ok) {
+      return null;
+    }
+    return await response.json();
+  },
+
+  async getAllUsers() {
+    const response = await fetch(`${API_BASE}/users`, {
+      credentials: "include",
+    });
+    if (!response.ok) {
+      return [];
+    }
+    return await response.json();
+  },
+  
 
   // async handleOAuthCallback({ code, state }) {
   //   const response = await fetch(`${API_BASE}/auth/oauth2/callback`, {
@@ -150,6 +170,8 @@ const AuthService = {
   initiateOAuth(provider = "google") {
     window.location.href = `${API_BASE}/oauth2/authorization/${provider}`;
   },
+
+  
 };
 
 export default AuthService;
