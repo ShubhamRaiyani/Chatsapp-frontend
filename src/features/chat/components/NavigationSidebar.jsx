@@ -71,46 +71,46 @@ const NavigationSidebar = ({
       ),
       count: 2,
     },
-    {
-      id: "archived",
-      label: "Archived",
-      icon: (
-        <svg
-          className="w-6 h-6"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M5 8l4 4m0 0l4-4m-4 4v12m-6-8a2 2 0 012-2h12a2 2 0 012 2v8a2 2 0 01-2 2H6a2 2 0 01-2-2v-8z"
-          />
-        </svg>
-      ),
-      count: 0,
-    },
-    {
-      id: "starred",
-      label: "Starred",
-      icon: (
-        <svg
-          className="w-6 h-6"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"
-          />
-        </svg>
-      ),
-      count: 0,
-    },
+    // {
+    //   id: "archived",
+    //   label: "Archived",
+    //   icon: (
+    //     <svg
+    //       className="w-6 h-6"
+    //       fill="none"
+    //       stroke="currentColor"
+    //       viewBox="0 0 24 24"
+    //     >
+    //       <path
+    //         strokeLinecap="round"
+    //         strokeLinejoin="round"
+    //         strokeWidth={2}
+    //         d="M5 8l4 4m0 0l4-4m-4 4v12m-6-8a2 2 0 012-2h12a2 2 0 012 2v8a2 2 0 01-2 2H6a2 2 0 01-2-2v-8z"
+    //       />
+    //     </svg>
+    //   ),
+    //   count: 0,
+    // },
+    // {
+    //   id: "starred",
+    //   label: "Starred",
+    //   icon: (
+    //     <svg
+    //       className="w-6 h-6"
+    //       fill="none"
+    //       stroke="currentColor"
+    //       viewBox="0 0 24 24"
+    //     >
+    //       <path
+    //         strokeLinecap="round"
+    //         strokeLinejoin="round"
+    //         strokeWidth={2}
+    //         d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"
+    //       />
+    //     </svg>
+    //   ),
+    //   count: 0,
+    // },
   ];
 
   return (
@@ -149,7 +149,7 @@ const NavigationSidebar = ({
       {/* Settings and User Menu */}
       <div className="p-2 border-t border-[#262626]">
         {/* Settings */}
-        <button
+        {/* <button
           className="w-full p-3 mb-2 rounded-xl text-gray-400 hover:text-white hover:bg-[#262626] transition-colors group"
           title="Settings"
         >
@@ -175,12 +175,11 @@ const NavigationSidebar = ({
             </svg>
           </div>
 
-          {/* Tooltip */}
           <div className="absolute left-full ml-3 px-3 py-2 bg-[#262626] text-white text-sm rounded-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 whitespace-nowrap z-50">
             Settings
             <div className="absolute left-0 top-1/2 transform -translate-y-1/2 -translate-x-1 w-2 h-2 bg-[#262626] rotate-45"></div>
           </div>
-        </button>
+        </button> */}
 
         {/* User Profile */}
         <div className="relative">
@@ -253,7 +252,7 @@ const NavigationSidebar = ({
                     <span>Profile</span>
                   </button>
 
-                  <button
+                  {/* <button
                     onClick={() => {
                       // Handle preferences
                       setShowUserMenu(false);
@@ -274,9 +273,9 @@ const NavigationSidebar = ({
                       />
                     </svg>
                     <span>Preferences</span>
-                  </button>
+                  </button> */}
 
-                  <button
+                  {/* <button
                     onClick={() => {
                       // Handle theme
                       setShowUserMenu(false);
@@ -302,7 +301,7 @@ const NavigationSidebar = ({
                         <div className="w-3 h-3 bg-white rounded-full absolute right-0.5 top-0.5"></div>
                       </div>
                     </div>
-                  </button>
+                  </button> */}
                 </div>
 
                 {/* Logout */}
