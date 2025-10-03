@@ -1,16 +1,9 @@
-// chat/components/NewChatModal.jsx - FIXED: Direct chat creation issue
 import React, { useState, useEffect, useRef } from "react";
 import Avatar from "./ui/Avatar";
 import UserAPI from "../services/UserAPI";
 
-const NewChatModal = ({
-  isOpen,
-  onClose,
-  onCreateChat,
-  onCreateGroup,
-  activeSection,
-  className = "",
-}) => {
+const NewChatModal = ({ isOpen, onClose, onCreateChat, onCreateGroup, className = "" }) => {
+  const [mode, setMode] = useState("direct");
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState([]);
   const [selectedUsers, setSelectedUsers] = useState([]);
@@ -19,128 +12,87 @@ const NewChatModal = ({
   const [groupName, setGroupName] = useState("");
   const [step, setStep] = useState(1);
   const [isCreating, setIsCreating] = useState(false);
+
   const searchInputRef = useRef(null);
   const debounceRef = useRef(null);
 
-  const isGroupMode = activeSection === "groups";
-
-  // Real API search function with minimum 3 characters
-  const searchUsers = async (query) => {
-    const trimmedQuery = query.trim();
-
-    if (trimmedQuery.length < 3) {
+  const searchUsers = async (q) => {
+    const trimmed = q.trim();
+    if (trimmed.length < 3) {
       setSearchResults([]);
       setSearchError(null);
       return;
     }
-
     setIsSearching(true);
     setSearchError(null);
-
     try {
-      const users = await UserAPI.searchUsers(trimmedQuery);
+      const users = await UserAPI.searchUsers(trimmed);
       setSearchResults(users || []);
-
-      if (users.length === 0) {
-        setSearchError("No users found matching your search");
-      }
-    } catch (error) {
-      console.error("Search failed:", error);
-      setSearchError("Failed to search users. Please try again.");
+      if (users.length === 0) setSearchError("No users found");
+    } catch {
+      setSearchError("Failed to search users");
       setSearchResults([]);
     } finally {
       setIsSearching(false);
     }
   };
 
-  // Handle search input change with debouncing
   const handleSearchChange = (e) => {
-    const query = e.target.value;
-    setSearchQuery(query);
-
-    // Clear previous debounce
-    if (debounceRef.current) {
-      clearTimeout(debounceRef.current);
-    }
-
-    // Clear results immediately if less than 3 characters
-    if (query.trim().length < 3) {
+    const val = e.target.value;
+    setSearchQuery(val);
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    if (val.trim().length < 3) {
       setSearchResults([]);
       setSearchError(null);
       setIsSearching(false);
       return;
     }
-
-    // Set new debounce for API call
-    debounceRef.current = setTimeout(() => {
-      searchUsers(query);
-    }, 500);
+    debounceRef.current = setTimeout(() => searchUsers(val), 500);
   };
 
-  // ✅ FIXED: Handle user selection - direct chat creation bug
-  const handleUserSelect = (user) => {
-    if (isGroupMode) {
-      // For groups, allow multiple selection
-      if (selectedUsers.find((u) => u.email === user.email)) {
-        setSelectedUsers(selectedUsers.filter((u) => u.email !== user.email));
-      } else {
-        setSelectedUsers([...selectedUsers, user]);
-      }
-    } else {
-      // ✅ FIX: For direct chat, create immediately with the user's EMAIL
-      handleCreateDirectChat(user); // Pass single user object, not array
-    }
-  };
-
-  // ✅ FIXED: Handle direct chat creation - was expecting array, now handles single user
-  const handleCreateDirectChat = async (user) => {
+  const handleCreateDirect = async (user) => {
     if (!user || isCreating) return;
-
     setIsCreating(true);
     try {
-      console.log("NewChatModal: Creating direct chat with email:", user.email);
-      // ✅ FIX: Pass user.email directly, not wrapped in array
       await onCreateChat(user.email);
       handleClose();
-    } catch (error) {
-      console.error("Failed to create direct chat:", error);
-      setSearchError("Failed to create chat. Please try again.");
+    } catch {
+      setSearchError("Failed to create chat");
     } finally {
       setIsCreating(false);
     }
   };
 
-  // Handle group creation
-  const handleCreateGroup = async () => {
-    if (selectedUsers.length === 0 || isCreating) return;
-
-    if (step === 1 && selectedUsers.length > 0) {
-      setStep(2);
-    } else if (step === 2) {
-      setIsCreating(true);
-      try {
-        const memberEmails = selectedUsers.map((user) => user.email);
-        const name = groupName.trim() || "New Group";
-
-        console.log(
-          "NewChatModal: Creating group:",
-          name,
-          "with members:",
-          memberEmails
-        );
-        await onCreateGroup(name, memberEmails);
-        handleClose();
-      } catch (error) {
-        console.error("Failed to create group:", error);
-        setSearchError("Failed to create group. Please try again.");
-      } finally {
-        setIsCreating(false);
-      }
+  const handleUserSelect = (user) => {
+    if (mode === "direct") {
+      handleCreateDirect(user);
+    } else {
+      const exists = selectedUsers.some((u) => u.email === user.email);
+      setSelectedUsers(exists ? selectedUsers.filter((u) => u.email !== user.email) : [...selectedUsers, user]);
     }
   };
 
-  // Reset modal state
+  const handleCreateGroup = async () => {
+    if (step === 1) {
+      if (!selectedUsers.length) return;
+      setStep(2);
+      return;
+    }
+    if (isCreating) return;
+    setIsCreating(true);
+    try {
+      const emails = selectedUsers.map((u) => u.email);
+      await onCreateGroup(groupName.trim() || "New Group", emails);
+      handleClose();
+    } catch {
+      setSearchError("Failed to create group");
+    } finally {
+      setIsCreating(false);
+    }
+  };
+
   const handleClose = () => {
+    setMode("direct");
     setSearchQuery("");
     setSearchResults([]);
     setSelectedUsers([]);
@@ -151,315 +103,212 @@ const NewChatModal = ({
     onClose();
   };
 
-  // Focus search input when modal opens
   useEffect(() => {
     if (isOpen && searchInputRef.current) {
-      setTimeout(() => {
-        searchInputRef.current.focus();
-      }, 100);
+      setTimeout(() => searchInputRef.current.focus(), 100);
     }
+    return () => clearTimeout(debounceRef.current);
   }, [isOpen]);
-
-  // Cleanup debounce on unmount
-  useEffect(() => {
-    return () => {
-      if (debounceRef.current) {
-        clearTimeout(debounceRef.current);
-      }
-    };
-  }, []);
 
   if (!isOpen) return null;
 
-  const canProceed = isGroupMode
-    ? step === 1
-      ? selectedUsers.length > 0
-      : groupName.trim().length > 0
-    : selectedUsers.length === 1;
-
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-gray-800 rounded-lg w-full max-w-md mx-4 max-h-[80vh] flex flex-col">
+      <div className={`bg-gray-800 rounded-lg w-full max-w-md h-[80vh] flex flex-col ${className}`}>
+        {/* Tabs */}
+        <div className="flex border-b border-gray-700">
+          <button onClick={() => { setMode("direct"); setStep(1); setSelectedUsers([]); }} className={`flex-1 py-3 text-center text-white cursor-pointer ${mode === "direct" ? "border-b-2 border-purple-500 font-semibold" : ""}`}>Direct</button>
+          <button onClick={() => { setMode("group"); setStep(1); setSelectedUsers([]); }} className={`flex-1 py-3 text-center text-white cursor-pointer ${mode === "group" ? "border-b-2 border-purple-500 font-semibold" : ""}`}>Group</button>
+        </div>
+
         {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-gray-700">
-          <h2 className="text-lg font-semibold text-white">
-            {isGroupMode
-              ? step === 1
-                ? "Create Group"
-                : "Group Details"
-              : "New Chat"}
-          </h2>
-          <button
-            onClick={handleClose}
-            disabled={isCreating}
-            className="p-1 hover:bg-gray-700 rounded-full transition-colors disabled:opacity-50"
-          >
-            <svg
-              className="w-5 h-5 text-gray-400"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M6 18L18 6M6 6l12 12"
-              />
+        <div className="flex items-center justify-between p-4 border-b border-gray-700 shrink-0">
+          <h2 className="text-lg font-semibold text-white">{mode === "direct" ? "New Chat" : step === 1 ? "Select Members" : "Group Details"}</h2>
+          <button onClick={handleClose} disabled={isCreating} className="p-1 rounded-full hover:bg-gray-700 transition-colors">
+            <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
             </svg>
           </button>
         </div>
 
         {/* Content */}
-        <div className="flex-1 overflow-hidden">
-          {step === 1 && (
-            <>
-              {/* Search Input */}
-              <div className="p-4 border-b border-gray-700">
-                <div className="relative">
-                  <input
-                    ref={searchInputRef}
-                    type="text"
-                    value={searchQuery}
-                    onChange={handleSearchChange}
-                    placeholder="Search by email (min 3 characters)..."
-                    className="w-full bg-gray-700 text-white placeholder-gray-400 rounded-lg px-4 py-2 pl-10 focus:outline-none focus:ring-2 focus:ring-purple-500"
-                    disabled={isCreating}
-                  />
-                  <svg
-                    className="absolute left-3 top-2.5 w-4 h-4 text-gray-400"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-                    />
-                  </svg>
-                </div>
-
-                {/* Search hint */}
-                {searchQuery.length > 0 && searchQuery.length < 3 && (
-                  <p className="text-xs text-yellow-400 mt-2">
-                    Type at least 3 characters to search
-                  </p>
-                )}
+        <div className="flex-1 flex flex-col overflow-hidden">
+          {mode === "direct" && (
+            <div className="flex-1 flex flex-col overflow-hidden">
+              <div className="relative px-4 pt-4">
+                <input type="text" ref={searchInputRef} placeholder="Search email (min 3 chars)..." className="w-full rounded-lg px-4 py-2 pl-10 bg-gray-700 placeholder-gray-400 text-white focus:outline-none focus:ring-2 focus:ring-purple-500" value={searchQuery} onChange={handleSearchChange} disabled={isCreating} />
+                <svg className="absolute left-6 top-6 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0" />
+                </svg>
               </div>
-
-              {/* Selected Users (for groups) */}
-              {isGroupMode && selectedUsers.length > 0 && (
-                <div className="p-4 border-b border-gray-700">
-                  <div className="flex flex-wrap gap-2">
-                    {selectedUsers.map((user) => (
-                      <div
-                        key={user.email}
-                        className="flex items-center bg-purple-600 text-white px-3 py-1 rounded-full text-sm"
-                      >
-                        <span>{user.username || user.email}</span>
-                        <button
-                          onClick={() => handleUserSelect(user)}
-                          disabled={isCreating}
-                          className="ml-2 hover:bg-purple-700 rounded-full p-0.5 disabled:opacity-50"
-                        >
-                          <svg
-                            className="w-3 h-3"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M6 18L18 6M6 6l12 12"
-                            />
-                          </svg>
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Search Results */}
-              <div className="flex-1 overflow-y-auto">
-                {isSearching && (
-                  <div className="p-4 text-center text-gray-400">
-                    <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-purple-600 mx-auto mb-2"></div>
-                    Searching...
-                  </div>
+              <div className="flex-1 overflow-auto mt-2 px-4">
+                {isSearching && <div className="text-center text-gray-400 py-4">Searching...</div>}
+                {searchError && <div className="text-center text-red-400 py-4">{searchError}</div>}
+                {!isSearching && !searchError && searchResults.length === 0 && searchQuery.trim().length >= 3 && (
+                  <div className="text-center text-gray-400 py-4">No results found</div>
                 )}
-
-                {searchError && (
-                  <div className="p-4 text-center text-red-400">
-                    {searchError}
-                  </div>
-                )}
-
-                {!isSearching &&
-                  !searchError &&
-                  searchQuery.length >= 3 &&
-                  searchResults.length === 0 && (
-                    <div className="p-4 text-center text-gray-400">
-                      No users found
-                    </div>
-                  )}
-
-                {!isSearching && searchResults.length > 0 && (
+                {searchResults.length > 0 && (
                   <div className="divide-y divide-gray-700">
-                    {searchResults.map((user) => {
-                      const isSelected = selectedUsers.find(
-                        (u) => u.email === user.email
-                      );
+                    {searchResults.map(user => {
+                      const selected = selectedUsers.some(u => u.email === user.email);
                       return (
-                        <div
-                          key={user.email}
-                          onClick={() => !isCreating && handleUserSelect(user)}
-                          className={`p-4 flex items-center space-x-3 hover:bg-gray-700 cursor-pointer transition-colors ${
-                            isSelected ? "bg-gray-700" : ""
-                          } ${
-                            isCreating ? "opacity-50 cursor-not-allowed" : ""
-                          }`}
-                        >
-                          <Avatar
-                            src={user.avatar}
-                            name={user.username || user.email}
-                            size="sm"
-                            status="offline"
-                          />
-                          <div className="flex-1">
-                            <div className="text-white font-medium">
-                              {user.username || "User"}
-                            </div>
-                            <div className="text-gray-400 text-sm">
-                              {user.email}
-                            </div>
+                        <div key={user.email} onClick={() => !isCreating && handleUserSelect(user)} className={`flex items-center px-4 py-2 cursor-pointer hover:bg-gray-700 rounded ${selected ? "bg-gray-700" : ""}`}>
+                          <Avatar src={user.avatar} name={user.username || user.email} size="sm" status="offline" />
+                          <div className="ml-3 flex-grow">
+                            <div className="text-white font-medium">{user.username || "User"}</div>
+                            <div className="text-gray-400 text-sm">{user.email}</div>
                           </div>
-                          {isGroupMode && (
-                            <div
-                              className={`w-5 h-5 rounded border-2 flex items-center justify-center ${
-                                isSelected
-                                  ? "bg-purple-600 border-purple-600"
-                                  : "border-gray-500"
-                              }`}
-                            >
-                              {isSelected && (
-                                <svg
-                                  className="w-3 h-3 text-white"
-                                  fill="none"
-                                  stroke="currentColor"
-                                  viewBox="0 0 24 24"
-                                >
-                                  <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    strokeWidth={2}
-                                    d="M5 13l4 4L19 7"
-                                  />
-                                </svg>
-                              )}
-                            </div>
-                          )}
                         </div>
                       );
                     })}
                   </div>
                 )}
               </div>
-            </>
+            </div>
           )}
 
-          {/* Group Details Step */}
-          {step === 2 && isGroupMode && (
-            <div className="p-4">
-              <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-300 mb-2">
-                  Group Name*
-                </label>
-                <input
-                  type="text"
-                  value={groupName}
-                  onChange={(e) => setGroupName(e.target.value)}
-                  placeholder="Enter group name..."
-                  className="w-full bg-gray-700 text-white placeholder-gray-400 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500"
-                  disabled={isCreating}
-                />
-              </div>
-
-              <div className="mb-4">
-                <div className="text-sm font-medium text-gray-300 mb-2">
-                  Members ({selectedUsers.length})
-                </div>
-                <div className="space-y-2 max-h-32 overflow-y-auto">
-                  {selectedUsers.map((user) => (
-                    <div
-                      key={user.email}
-                      className="flex items-center space-x-3"
-                    >
-                      <Avatar
-                        src={user.avatar}
-                        name={user.username || user.email}
-                        size="xs"
-                      />
-                      <div>
-                        <span className="text-white text-sm">
-                          {user.username || "User"}
-                        </span>
-                        <div className="text-xs text-gray-400">
-                          {user.email}
-                        </div>
-                      </div>
+          {mode === "group" && (
+            <div className="flex-1 flex flex-col overflow-hidden">
+              {/* Selected users as chips */}
+              {selectedUsers.length > 0 && (
+                <div className="px-4 py-2 flex space-x-2 overflow-x-auto">
+                  {selectedUsers.map(user => (
+                    <div key={user.email} className="flex items-center bg-purple-600 rounded-full text-white py-1 px-3 whitespace-nowrap">
+                      <span>{user.username || user.email}</span>
+                      <button onClick={() => !isCreating && handleUserSelect(user)} className="ml-2 rounded-full p-0.5 hover:bg-purple-700">
+                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                      </button>
                     </div>
                   ))}
                 </div>
-              </div>
+              )}
 
-              {searchError && (
-                <div className="mb-4 p-3 bg-red-600 bg-opacity-20 border border-red-600 rounded-lg">
-                  <p className="text-red-400 text-sm">{searchError}</p>
+              {/* Step 1: search */}
+              {step === 1 && (
+                <div className="flex-1 flex flex-col overflow-hidden">
+                  <div className="relative px-4 py-2">
+                    <input type="text" ref={searchInputRef} placeholder="Search contacts..." className="w-full rounded-lg px-4 py-2 pl-10 bg-gray-700 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500" value={searchQuery} onChange={handleSearchChange} disabled={isCreating} />
+                    <svg className="absolute left-6 top-6 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" >
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0" />
+                    </svg>
+                  </div>
+                  <div className="flex-1 overflow-auto mt-2 px-4">
+                    {isSearching && <div className="text-center text-gray-400 py-4">Searching...</div>}
+                    {searchError && <div className="text-center text-red-400 py-4">{searchError}</div>}
+                    {!isSearching && !searchError && searchResults.length === 0 && searchQuery.trim().length >= 3 && (
+                      <div className="text-center text-gray-400 py-4">No results found</div>
+                    )}
+                    {searchResults.length > 0 && (
+                      <div className="divide-y divide-gray-700">
+                        {searchResults.map(user => {
+                          const selected = selectedUsers.some(u => u.email === user.email);
+                          return (
+                            <div
+                              key={user.email}
+                              onClick={() =>
+                                !isCreating && handleUserSelect(user)
+                              }
+                              className={`flex items-center px-4 py-2 cursor-pointer hover:bg-gray-700 rounded ${
+                                selected ? "bg-gray-700" : ""
+                              }`}
+                            >
+                              <Avatar
+                                src={user.avatar}
+                                name={user.username || user.email}
+                                size="sm"
+                                status="offline"
+                              />
+                              <div className="ml-3 flex-grow">
+                                <div className="text-white font-medium">
+                                  {user.username || "User"}
+                                </div>
+                                <div className="text-gray-400 text-sm">
+                                  {user.email}
+                                </div>
+                              </div>
+                              <div
+                                className={`w-5 h-5 flex-shrink-0 flex items-center justify-center border-2 rounded ${
+                                  selected
+                                    ? "bg-purple-600 border-purple-600"
+                                    : "border-gray-500"
+                                }`}
+                              >
+                                {selected && (
+                                  <svg
+                                    className="w-3 h-3 text-white"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                  >
+                                    <path
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                      strokeWidth={2}
+                                      d="M5 13l4 4L19 7"
+                                    />
+                                  </svg>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
+
+              {/* Step 2: group details */}
+              {step === 2 && (
+                <div className="flex flex-col px-4 py-2 flex-1 overflow-auto">
+                  <div className="mb-4">
+                    <label className="block text-sm font-semibold text-white mb-2">Group Name</label>
+                    <input type="text" value={groupName} onChange={e => setGroupName(e.target.value)} placeholder="Enter group name..." className="w-full rounded-lg bg-gray-700 text-white px-4 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500" disabled={isCreating} />
+                  </div>
+                  <div className="flex-1 overflow-auto space-y-2">
+                    {selectedUsers.map(user => (
+                      <div key={user.email} className="flex items-center space-x-3">
+                        <Avatar src={user.avatar} name={user.username || user.email} size="xs" />
+                        <div>
+                          <div className="text-white font-medium">{user.username || "User"}</div>
+                          <div className="text-gray-400 text-xs">{user.email}</div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  {searchError && (
+                    <div className="mt-4 px-3 py-2 bg-red-700 bg-opacity-50 rounded text-red-300">{searchError}</div>
+                  )}
+                </div>
+              )}
+
             </div>
           )}
+
         </div>
 
         {/* Footer */}
-        <div className="p-4 border-t border-gray-700 flex justify-end space-x-3">
-          {step === 2 && isGroupMode && (
-            <button
-              onClick={() => setStep(1)}
-              disabled={isCreating}
-              className="px-4 py-2 text-gray-400 hover:text-white transition-colors disabled:opacity-50"
-            >
+        <div className="flex justify-end space-x-3 p-4 border-t border-gray-700 shrink-0">
+          {mode === "group" && step === 2 && (
+            <button onClick={() => setStep(1)} disabled={isCreating} className="text-gray-400 px-4 py-2 hover:text-white rounded">
               Back
             </button>
           )}
-          <button
-            onClick={handleClose}
-            disabled={isCreating}
-            className="px-4 py-2 text-gray-400 hover:text-white transition-colors disabled:opacity-50"
-          >
+          <button onClick={handleClose} disabled={isCreating} className="text-gray-400 px-4 py-2 hover:text-white rounded">
             Cancel
           </button>
-          {isGroupMode && (
+          {mode === "group" ? (
             <button
               onClick={handleCreateGroup}
-              disabled={!canProceed || isCreating}
-              className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center"
+              disabled={isCreating || (step === 1 ? selectedUsers.length === 0 : !groupName.trim())}
+              className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded"
             >
-              {isCreating && (
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-              )}
-              {step === 1
-                ? "Next"
-                : isCreating
-                ? "Creating..."
-                : "Create Group"}
+              {isCreating ? <span className="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" /> : null}
+              {step === 1 ? "Next" : "Create"}
             </button>
-          )}
+          ) : null}
         </div>
       </div>
     </div>

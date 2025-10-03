@@ -1114,3 +1114,415 @@ body,
   margin-bottom: 4px;
   color: #9ca3af; /* gray-400 */
 }
+
+/* Add these responsive breakpoints and improvements to your existing index.css */
+
+/* ===== CORE RESPONSIVE LAYOUT FIXES ===== */
+@media (max-width: 1024px) {
+  .dashboard-container {
+    flex-direction: column;
+  }
+
+  .sidebar-section {
+    width: 100%;
+    height: auto;
+  }
+
+  .chat-section {
+    height: calc(100vh - 60px);
+    /* Account for collapsed sidebar */
+  }
+}
+
+@media (max-width: 768px) {
+
+  /* Mobile-first chat layout */
+  .dashboard-container {
+    position: relative;
+    overflow: hidden;
+  }
+
+  .sidebar-section {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100vh;
+    z-index: 20;
+    transform: translateX(-100%);
+    transition: transform 0.3s ease;
+    background: #1f2937;
+    /* Ensure background covers */
+  }
+
+  .sidebar-section.show {
+    transform: translateX(0);
+  }
+
+  .chat-section {
+    width: 100%;
+    height: 100vh;
+  }
+
+  /* Navigation sidebar mobile adjustments */
+  .navigation-sidebar {
+    width: 60px;
+    /* Collapsed on mobile */
+    flex-shrink: 0;
+  }
+
+  .navigation-sidebar .nav-item-label {
+    display: none;
+  }
+
+  .navigation-sidebar .nav-item {
+    justify-content: center;
+    padding: 12px 8px;
+  }
+}
+
+/* ===== MOBILE NAVIGATION BAR ===== */
+@media (max-width: 768px) {
+  .mobile-nav-bar {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 60px;
+    background: #1f2937;
+    border-top: 1px solid #374151;
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    z-index: 30;
+  }
+
+  .mobile-nav-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    color: #9ca3af;
+    font-size: 10px;
+    padding: 8px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .mobile-nav-item.active {
+    color: #3b82f6;
+    background: rgba(59, 130, 246, 0.1);
+  }
+
+  .mobile-nav-icon {
+    font-size: 18px;
+  }
+
+  /* Adjust chat area for mobile nav */
+  .chat-area {
+    padding-bottom: 60px;
+    /* Space for mobile nav */
+  }
+}
+
+/* ===== RESPONSIVE MESSAGE BUBBLES ===== */
+@media (max-width: 480px) {
+  .message-bubble {
+    margin: 2px 0;
+  }
+
+  .message-bubble .message-body {
+    max-width: 85%;
+    padding: 6px 10px;
+    font-size: 13px;
+  }
+
+  .summary-message-content {
+    gap: 6px;
+  }
+
+  .summary-text {
+    font-size: 12px;
+    line-height: 1.4;
+  }
+}
+
+/* ===== RESPONSIVE TOP BAR ===== */
+@media (max-width: 768px) {
+  .chat-top-bar {
+    padding: 8px 12px;
+  }
+
+  .chat-top-bar .avatar {
+    width: 32px;
+    height: 32px;
+  }
+
+  .chat-top-bar .chat-title {
+    font-size: 14px;
+  }
+
+  .chat-top-bar .chat-subtitle {
+    font-size: 12px;
+  }
+
+  .chat-actions .action-button {
+    width: 32px;
+    height: 32px;
+  }
+}
+
+/* Add these mobile-specific styles to your existing index.css */
+
+/* ===== MOBILE RESPONSIVE IMPROVEMENTS ===== */
+
+/* Custom scrollbar for mobile */
+@media (max-width: 768px) {
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 3px;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: #4a5568;
+    border-radius: 3px;
+  }
+}
+
+/* Mobile keyboard handling */
+@media (max-width: 768px) {
+
+  /* Adjust viewport when keyboard is open */
+  .chat-area {
+    height: 100dvh;
+    /* Use dynamic viewport height */
+  }
+
+  /* Ensure typing area stays above keyboard */
+  .typing-area {
+    position: relative;
+    z-index: 10;
+  }
+}
+
+/* Touch improvements */
+@media (hover: none) and (pointer: coarse) {
+
+  /* Larger touch targets on touch devices */
+  .touch-target {
+    min-height: 44px;
+    min-width: 44px;
+  }
+
+  /* Remove hover effects on touch devices */
+  .hover\:bg-gray-700:hover {
+    background-color: initial;
+  }
+
+  /* Add active states for touch feedback */
+  .touch-feedback:active {
+    background-color: rgba(55, 65, 81, 0.7);
+    transform: scale(0.98);
+    transition: all 0.1s ease;
+  }
+}
+
+/* Enhanced mobile navigation */
+.mobile-nav-bar {
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+/* Improved focus states for accessibility */
+@media (max-width: 768px) {
+  .focus\:outline-none:focus {
+    outline: 2px solid #3b82f6;
+    outline-offset: 2px;
+  }
+}
+
+/* Message bubble mobile optimizations */
+@media (max-width: 480px) {
+  .message-bubble {
+    max-width: 85%;
+  }
+
+  .message-bubble.own {
+    margin-left: 15%;
+  }
+
+  .message-bubble.other {
+    margin-right: 15%;
+  }
+}
+
+/* Safe area handling for devices with notches */
+@supports (padding: max(0px)) {
+  .safe-area-top {
+    padding-top: max(1rem, env(safe-area-inset-top));
+  }
+
+  .safe-area-bottom {
+    padding-bottom: max(1rem, env(safe-area-inset-bottom));
+  }
+}
+
+/* Make bubbles shrink to fit their content */
+.message-bubble {
+  display: flex;
+  /* keep avatar and bubble side by side */
+  align-items: flex-end;
+  /* align bubble bottom with avatar/text */
+  margin: 0.25rem 0;
+  /* small vertical spacing */
+}
+
+.message-bubble.own {
+  justify-content: flex-end;
+}
+
+.message-bubble.other {
+  justify-content: flex-start;
+}
+
+/* Limit bubble width to content, up to a max */
+.message-body {
+  display: inline-block;
+  /* shrink‐wrap to content */
+  max-width: 80%;
+  /* never exceed 80% of container */
+  word-wrap: break-word;
+  /* wrap long words */
+  white-space: pre-wrap;
+  /* preserve line breaks */
+  padding: 0.5rem 0.75rem;
+  /* your existing padding */
+  border-radius: 0.75rem;
+  /* your existing rounding */
+}
+
+/* Summary and other special bubbles */
+.summary-body,
+.message-image img,
+.message-file {
+  display: inline-block;
+  /* same shrink‐wrap behavior */
+  max-width: 80%;
+  /* consistent limit */
+}
+
+/* Optional: adjust grouped bubbles to indent slightly */
+.message-bubble.grouped .message-body {
+  margin-top: 0.25rem;
+}
+/* Shrink-wrap bubbles until max-width, then wrap text */
+.message-body {
+  display: inline-block;
+  /* shrink to content */
+  max-width: 60ch;
+  /* up to ~60 characters wide */
+  width: auto;
+  /* let content determine width */
+  white-space: normal;
+  /* enable normal wrapping */
+  word-wrap: break-word;
+  /* break long words */
+  line-height: 1.4;
+  /* comfortable line spacing */
+  padding: 0.5rem 0.75rem;
+  /* keep your existing padding */
+  border-radius: 0.75rem;
+  /* keep your existing rounding */
+}
+
+/* For summary and media bubbles too */
+.summary-body,
+.message-image img,
+.message-file {
+  display: inline-block;
+  max-width: 60ch;
+  white-space: normal;
+  word-wrap: break-word;
+}
+
+/* Maintain alignment and spacing */
+.message-bubble {
+  display: flex;
+  align-items: flex-end;
+  margin: 0.25rem 0;
+}
+
+.message-bubble.own {
+  justify-content: flex-end;
+}
+
+.message-bubble.other {
+  justify-content: flex-start;
+}
+/* Align all bubbles to the top */
+.message-bubble {
+  display: flex;
+  align-items: flex-start;
+  /* top-align avatar & bubble */
+  margin: 0.25rem 0;
+}
+
+/* Sent messages (own) still right-justify */
+.message-bubble.own {
+  justify-content: flex-end;
+}
+
+/* Received messages left-justify */
+.message-bubble.other {
+  justify-content: flex-start;
+}
+
+/* Make avatar and bubble align at top */
+.message-avatar {
+  margin-top: 0.25rem;
+  /* optional small offset to match bubble padding */
+}
+
+/* Bubble content itself can center text if needed */
+.message-body {
+  display: inline-block;
+  max-width: 60ch;
+  white-space: normal;
+  word-wrap: break-word;
+  line-height: 1.4;
+  padding: 0.5rem 0.75rem;
+  border-radius: 0.75rem;
+  align-self: flex-start;
+  /* ensure bubble sits at top of flex container */
+}
+
+/* Ensure AI summaries share the same top alignment as text/image bubbles */
+.message-bubble.summary-message {
+  align-items: flex-start !important;
+}
+
+.message-bubble.summary-message .message-content {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+.message-body {
+  display: inline-block;
+  max-width: 60ch;
+  white-space: normal;
+  word-wrap: break-word;
+  line-height: 1.4;
+  padding: 0.5rem 1.5rem 0.5rem 0.75rem;
+  /* increased right padding */
+  border-radius: 0.75rem;
+  align-self: flex-start;
+}
+/* Allow scrolling inside group member selection */
+.group-members-container {
+  max-height: 12rem;
+  overflow-y: auto;
+}

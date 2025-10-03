@@ -85,11 +85,7 @@ const MessageBubble = ({
               {formatMessageTime(message.sentAt || message.createdAt)}
             </span>
 
-            {isOwn && (
-              <div className="message-status">
-                <span className="status-icon">✓✓</span>
-              </div>
-            )}
+            {isOwn && <></>}
           </div>
         </div>
 

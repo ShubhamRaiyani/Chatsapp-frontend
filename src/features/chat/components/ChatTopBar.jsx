@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Avatar from "./ui/Avatar";
 import {
   Phone,
@@ -23,6 +23,29 @@ const ChatTopBar = ({
   className = "",
 }) => {
   const [showDropdown, setShowDropdown] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+
+  // Mobile detection
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    checkMobile();
+    window.addEventListener("resize", checkMobile);
+    return () => window.removeEventListener("resize", checkMobile);
+  }, []);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (showDropdown && !event.target.closest(".dropdown-container")) {
+        setShowDropdown(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [showDropdown]);
 
   const getChatTitle = () => {
     if (chat.isGroup) {
@@ -51,65 +74,53 @@ const ChatTopBar = ({
   return (
     <div
       className={`
-        flex items-center justify-between px-4 py-3
-        bg-white dark:bg-gray-800
-        border-b border-gray-200 dark:border-gray-700
-        ${className}
-      `}
+      flex items-center justify-between p-3 md:p-4 bg-gray-800 border-b border-gray-700
+      ${className}
+    `}
     >
-      {/* Left Section */}
+      {/* Left section with back button and chat info */}
       <div className="flex items-center gap-3 flex-1 min-w-0">
-        {onBack && (
+        {/* Back button - only show on mobile */}
+        {isMobile && onBack && (
           <button
             onClick={onBack}
-            className="md:hidden p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition-colors"
+            className="flex items-center justify-center w-8 h-8 rounded-full hover:bg-gray-700 text-gray-400 hover:text-white transition-colors"
           >
-            <ArrowLeft size={20} className="text-gray-600 dark:text-gray-400" />
+            <ArrowLeft size={18} />
           </button>
         )}
 
+        {/* Avatar */}
         <Avatar
           src={getAvatarSrc()}
-          name={getChatTitle()}
-          size="md"
+          alt={getChatTitle()}
+          className="w-8 h-8 md:w-10 md:h-10 flex-shrink-0"
           status={getStatus()}
         />
 
-        <div className="flex-1 min-w-0">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white truncate">
+        {/* Chat title and subtitle */}
+        <div className="flex flex-col min-w-0 flex-1">
+          <h2 className="font-medium text-white text-sm md:text-base truncate">
             {getChatTitle()}
-          </h3>
-          <p className="text-sm text-gray-500 dark:text-gray-400 truncate">
-            {getChatSubtitle()}
-          </p>
-          {chat?.isTyping && (
-            <div className="flex items-center gap-1 text-xs text-blue-600 dark:text-blue-400">
-              <div className="flex gap-1">
-                <div
-                  className="w-1 h-1 bg-current rounded-full animate-bounce"
-                  style={{ animationDelay: "0ms" }}
-                />
-                <div
-                  className="w-1 h-1 bg-current rounded-full animate-bounce"
-                  style={{ animationDelay: "150ms" }}
-                />
-                <div
-                  className="w-1 h-1 bg-current rounded-full animate-bounce"
-                  style={{ animationDelay: "300ms" }}
-                />
-              </div>
-              <span>typing...</span>
-            </div>
-          )}
+          </h2>
+          <div className="flex items-center gap-2">
+            <p className="text-xs md:text-sm text-gray-400 truncate">
+              {getChatSubtitle()}
+            </p>
+            {chat?.isTyping && (
+              <span className="text-xs text-blue-400 animate-pulse">
+                typing...
+              </span>
+            )}
+          </div>
         </div>
       </div>
 
-      {/* Right Section */}
-      <div className="flex items-center gap-2">
-        <button className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition-colors">
-          <Search size={20} className="text-gray-600 dark:text-gray-400" />
-        </button>
+      {/* Right section - Action buttons */}
+      <div className="flex items-center gap-1 md:gap-2">
+        {/* Hide some buttons on mobile to save space */}
 
+        {/* Summary button */}
         {onSummarize && (
           <button
             onClick={() => onSummarize(chat.id)}
@@ -138,26 +149,68 @@ const ChatTopBar = ({
           </button>
         )}
 
-        <button
-          onClick={chat.isGroup ? onShowMembers : onShowInfo}
-          className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition-colors"
-          title={chat.isGroup ? "View Members" : "Chat Info"}
-        >
-          {chat.isGroup ? (
-            <Users size={20} className="text-gray-600 dark:text-gray-400" />
-          ) : (
-            <Info size={20} className="text-gray-600 dark:text-gray-400" />
-          )}
-        </button>
-      </div>
+        {/* More options dropdown */}
+        <div className="relative dropdown-container">
+          <button
+            onClick={() => setShowDropdown(!showDropdown)}
+            className="flex items-center justify-center w-8 h-8 md:w-10 md:h-10 rounded-full hover:bg-gray-700 text-gray-400 hover:text-white transition-colors"
+          >
+            <MoreVertical size={16} className="md:w-5 md:h-5" />
+          </button>
 
-      {/* Dropdown Backdrop (unused here but kept for parity) */}
-      {showDropdown && (
-        <div
-          className="fixed inset-0 z-40"
-          onClick={() => setShowDropdown(false)}
-        />
-      )}
+          {/* Mobile-friendly dropdown */}
+          {showDropdown && (
+            <div className="absolute right-0 mt-2 w-48 bg-gray-700 rounded-lg shadow-lg border border-gray-600 z-50">
+              {isMobile && (
+                <>
+                  <button
+                    onClick={() => {
+                      onStartCall?.(chat);
+                      setShowDropdown(false);
+                    }}
+                    className="flex items-center gap-3 w-full px-4 py-2 text-left text-gray-200 hover:bg-gray-600 transition-colors rounded-t-lg"
+                  >
+                    <Phone size={16} />
+                    <span>Voice Call</span>
+                  </button>
+                  <button
+                    onClick={() => {
+                      onStartVideoCall?.(chat);
+                      setShowDropdown(false);
+                    }}
+                    className="flex items-center gap-3 w-full px-4 py-2 text-left text-gray-200 hover:bg-gray-600 transition-colors"
+                  >
+                    <Video size={16} />
+                    <span>Video Call</span>
+                  </button>
+                </>
+              )}
+              <button
+                onClick={() => {
+                  onShowInfo?.(chat);
+                  setShowDropdown(false);
+                }}
+                className="flex items-center gap-3 w-full px-4 py-2 text-left text-gray-200 hover:bg-gray-600 transition-colors"
+              >
+                <Info size={16} />
+                <span>Chat Info</span>
+              </button>
+              {chat?.isGroup && (
+                <button
+                  onClick={() => {
+                    onShowMembers?.(chat);
+                    setShowDropdown(false);
+                  }}
+                  className="flex items-center gap-3 w-full px-4 py-2 text-left text-gray-200 hover:bg-gray-600 transition-colors rounded-b-lg"
+                >
+                  <Users size={16} />
+                  <span>View Members</span>
+                </button>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 };

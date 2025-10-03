@@ -3,6 +3,7 @@ import MessageBubble from "./ui/MessageBubble";
 import TypingIndicator from "./ui/TypingIndicator";
 import ReadReceipt from "./ui/ReadReceipt";
 import { groupMessagesByDate, shouldShowAvatar } from "../utils/messageUtils";
+import { ChevronDown } from "lucide-react";
 
 const MessageList = ({
   messages = [],
@@ -21,6 +22,17 @@ const MessageList = ({
   const containerRef = useRef(null);
   const [isAtBottom, setIsAtBottom] = useState(true);
   const [showScrollButton, setShowScrollButton] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+
+  // Mobile detection
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    checkMobile();
+    window.addEventListener("resize", checkMobile);
+    return () => window.removeEventListener("resize", checkMobile);
+  }, []);
 
   const scrollToBottom = (smooth = true) => {
     messagesEndRef.current?.scrollIntoView({
@@ -36,6 +48,7 @@ const MessageList = ({
     setIsAtBottom(atBottom);
     setShowScrollButton(!atBottom && messages.length > 10);
 
+    // Load more messages when scrolled to top
     if (scrollTop === 0 && hasMore && !loading && onLoadMore) {
       onLoadMore();
     }
@@ -58,100 +71,80 @@ const MessageList = ({
   const groupedMessages = groupMessagesByDate(messages);
 
   const renderDateSeparator = (date) => (
-    <div className="flex justify-center my-4" key={`date-${date}`}>
-      <div className="bg-gray-100 dark:bg-gray-700 px-3 py-1 rounded-full">
-        <span className="text-xs text-gray-500 dark:text-gray-400 font-medium">
-          {date}
-        </span>
+    <div key={`date-${date}`} className="flex justify-center my-4">
+      <div className="bg-gray-700 text-gray-300 text-xs px-3 py-1 rounded-full">
+        {date}
       </div>
     </div>
   );
 
-  const renderMessage = (message, index, messagesInGroup) => {
-    // ✅ FIXED: Proper isOwn calculation
-    const isOwn = message.senderEmail === currentUserId || message.senderId === currentUserId;
-    console.log("🧾 Message senderEmail:", message.senderEmail, "Current userId:", currentUserId, "isOwn:", isOwn);
-    // Calculate if avatar should be shown
-    const showAvatar = shouldShowAvatar(message, index, messagesInGroup, isOwn);
-    
-    // Check if message is grouped (consecutive messages from same sender)
-    const isGrouped = index > 0 && 
-      messagesInGroup[index - 1].senderEmail === message.senderEmail;
-
-    console.log("📨 Rendering message:", {
-      messageId: message.messageId || message.id,
-      senderEmail: message.senderEmail,
-      currentUserId,
-      isOwn,
-      showAvatar
-    });
-
-    return (
-      <div
-        key={message.messageId || message.id || `msg-${index}`}
-        className={`w-full flex ${isOwn ? 'justify-end' : 'justify-start'} mb-1`}
-      >
-        <div className={`max-w-[80%] md:max-w-[60%] ${isOwn ? 'order-2' : 'order-1'}`}>
-          <MessageBubble
-            message={message}
-            isOwn={isOwn}
-            showAvatar={showAvatar}
-            isGrouped={isGrouped}
-            currentUserId={currentUserId}
-            onEdit={onEditMessage}
-            onDelete={onDeleteMessage}
-            onReact={onReactToMessage}
-            UsernameofChat={UsernameofChat}
-          />
-        </div>
-      </div>
-    );
-  };
-
   return (
-    <div className={`flex flex-col h-full ${className}`}>
-      {/* Messages Container */}
+    <div className={`flex-1 flex flex-col min-h-0 relative ${className}`}>
+      {/* Loading indicator for pagination */}
+      {loading && hasMore && (
+        <div className="flex justify-center py-2">
+          <div className="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+        </div>
+      )}
+
+      {/* Messages container */}
       <div
         ref={containerRef}
-        className="flex-1 overflow-y-auto px-4 py-2 space-y-1"
+        className={`
+          flex-1 overflow-y-auto custom-scrollbar
+          ${isMobile ? "px-2 py-2" : "px-4 py-4"}
+        `}
+        style={{
+          scrollBehavior: "smooth",
+        }}
       >
-        {loading && hasMore && (
-          <div className="flex justify-center py-4">
-            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500"></div>
-          </div>
-        )}
-
-        {/* Render grouped messages by date */}
-        {groupedMessages.map(({ date, messages: messagesInGroup }) => (
+        {groupedMessages.map(({ date, messages: dayMessages }) => (
           <div key={date}>
             {renderDateSeparator(date)}
-            {messagesInGroup.map((message, index) =>
-              renderMessage(message, index, messagesInGroup)
-            )}
+            {dayMessages.map((message, index) => {
+              const isOwn = message.senderEmail === currentUserId;
+              const showAvatar = shouldShowAvatar(
+                dayMessages,
+                index,
+                currentUserId
+              );
+
+              return (
+                <MessageBubble
+                  key={message.id}
+                  message={message}
+                  isOwn={isOwn}
+                  showAvatar={showAvatar && !isOwn}
+                  isGrouped={!showAvatar}
+                  currentUserId={currentUserId}
+                  UsernameofChat={UsernameofChat}
+                  isMobile={isMobile}
+                  onEdit={onEditMessage}
+                  onDelete={onDeleteMessage}
+                  onReact={onReactToMessage}
+                />
+              );
+            })}
           </div>
         ))}
 
-        {/* Typing Indicator */}
+        {/* Typing indicators */}
         {typingUsers.length > 0 && (
-          <div className="flex justify-start mb-1">
-            <div className="max-w-[80%] md:max-w-[60%]">
-              <TypingIndicator users={typingUsers} />
-            </div>
+          <div className={`${isMobile ? "px-2 py-1" : "px-4 py-2"}`}>
+            <TypingIndicator users={typingUsers} />
           </div>
         )}
 
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Scroll to bottom button */}
+      {/* Scroll to bottom button - mobile optimized */}
       {showScrollButton && (
         <button
-          onClick={() => scrollToBottom(true)}
-          className="absolute bottom-20 right-6 bg-blue-500 hover:bg-blue-600 text-white rounded-full p-2 shadow-lg transition-all duration-200"
+          onClick={() => scrollToBottom()}
+          className="absolute rounded-full transition-transform hover:scale-110"
         >
-          <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-            <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
-          </svg>
+          <ChevronDown size={isMobile ? 20 : 24} />
         </button>
       )}
     </div>

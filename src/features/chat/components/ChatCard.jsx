@@ -1,5 +1,4 @@
-// chat/components/ChatCard.jsx - Updated for optimized ChatDTO
-
+// chat/components/ChatCard.jsx - Mobile Responsive Version
 import React from "react";
 import Avatar from "./ui/Avatar";
 import { formatLastActivityChatCard } from "../utils/dateUtils";
@@ -9,6 +8,7 @@ const ChatCard = ({
   isActive = false,
   onClick,
   currentUserId,
+  isMobile = false,
   className = "",
 }) => {
   const getChatTitle = () => {
@@ -31,109 +31,108 @@ const ChatCard = ({
     return chat.participants?.[0]?.status;
   };
 
-  // ✅ Use unreadCount from ChatDTO
+  // Use unreadCount from ChatDTO
   const hasUnreadMessages = (chat.unreadCount || 0) > 0;
 
-  // ✅ Use lastMessage directly from ChatDTO
+  // Use lastMessage directly from ChatDTO
   const lastMessage = chat.lastMessage;
 
   return (
     <div
-      className={`p-4 cursor-pointer transition-all duration-200 border-l-4 ${
-        isActive
-          ? "bg-gray-700 border-purple-500 shadow-lg"
-          : "bg-gray-800 border-transparent hover:bg-gray-700"
-      } ${className}`}
-      onClick={() => onClick(chat)}
+      onClick={onClick}
+      className={`
+    flex items-center gap-3 cursor-pointer transition-colors border-b border-gray-700/50
+    ${isActive ? "bg-blue-600/20 border-blue-600/30" : "hover:bg-gray-700/50"}
+    ${isMobile ? "p-3" : "p-4"}
+    ${className}
+  `}
     >
-      <div className="flex items-start space-x-3">
-        {/* Avatar with Status */}
-        <div className="relative flex-shrink-0">
-          <Avatar
-            src={getAvatarSrc()}
-            alt={getChatTitle()}
-            size="md"
-            status={getStatus()}
-            showStatus={!chat.isGroup}
-          />
-          {/* Unread indicator */}
-          {hasUnreadMessages && (
-            <div className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full flex items-center justify-center">
-              <span className="text-xs text-white font-semibold">
-                {chat.unreadCount > 9 ? "9+" : chat.unreadCount}
+      {/* Avatar */}
+      <Avatar
+        src={getAvatarSrc()}
+        alt={getChatTitle()}
+        className={`flex-shrink-0 ${isMobile ? "w-10 h-10" : "w-12 h-12"}`}
+        status={getStatus()}
+      />
+
+      {/* Chat content */}
+      <div className="flex-1 min-w-0">
+        {/* Header row */}
+        <div className="flex items-center justify-between mb-1">
+          <h3
+            className={`
+            font-medium text-white truncate
+            ${isMobile ? "text-sm" : "text-base"}
+          `}
+          >
+            {getChatTitle()}
+          </h3>
+
+          {/* Time and indicators */}
+          <div className="flex items-center gap-2 flex-shrink-0 ml-2">
+            {chat.lastActivityAt && (
+              <span
+                className={`
+                text-gray-400
+                ${isMobile ? "text-xs" : "text-sm"}
+              `}
+              >
+                {formatLastActivityChatCard(chat.lastActivityAt)}
               </span>
-            </div>
-          )}
+            )}
+
+            {/* Unread indicator */}
+            {hasUnreadMessages && (
+              <div
+                className={`
+                bg-blue-600 text-white rounded-full flex items-center justify-center font-medium
+                ${isMobile ? "w-5 h-5 text-xs" : "w-6 h-6 text-sm"}
+              `}
+              >
+                {chat.unreadCount > 99 ? "99+" : chat.unreadCount}
+              </div>
+            )}
+          </div>
         </div>
 
-        {/* Chat Info */}
-        <div className="flex-1 min-w-0">
-          {/* Header */}
-          <div className="flex items-center justify-between mb-1">
-            <h3
-              className={`font-medium truncate ${
-                isActive ? "text-white" : "text-gray-200"
-              }`}
-            >
-              {getChatTitle()}
-            </h3>
+        {/* Last message */}
+        <p
+          className={`
+          text-gray-400 truncate
+          ${isMobile ? "text-xs" : "text-sm"}
+        `}
+        >
+          {lastMessage || "No messages yet"}
+        </p>
+
+        {/* Additional indicators */}
+        <div className="flex items-center gap-2 mt-1">
+          {chat.isGroup && (
             <span
-              className={`text-xs flex-shrink-0 ml-2 ${
-                hasUnreadMessages
-                  ? "text-purple-400 font-semibold"
-                  : "text-gray-400"
-              }`}
+              className={`
+              text-gray-500 flex items-center gap-1
+              ${isMobile ? "text-xs" : "text-sm"}
+            `}
             >
-              {chat.lastActivity
-                ? formatLastActivityChatCard(chat.lastActivity)
-                : ""}
+              <span>👥</span>
+              {chat.participantEmails?.length || 0} members
             </span>
-          </div>
+          )}
 
-          {/* Last Message */}
-          <div className="flex items-center justify-between">
-            <p
-              className={`text-sm truncate ${
-                hasUnreadMessages
-                  ? "text-gray-200 font-medium"
-                  : isActive
-                  ? "text-gray-300"
-                  : "text-gray-400"
-              }`}
+          {chat.archived && (
+            <span
+              className={`
+              text-gray-500
+              ${isMobile ? "text-xs" : "text-sm"}
+            `}
             >
-              {lastMessage || "No messages yet"}
-            </p>
+              📁 Archived
+            </span>
+          )}
 
-            {/* Additional indicators */}
-            <div className="flex items-center space-x-1 ml-2">
-              {/* Group indicator */}
-              {chat.isGroup && (
-                <div className="w-4 h-4 bg-gray-600 rounded-full flex items-center justify-center">
-                  <svg
-                    className="w-2.5 h-2.5 text-gray-300"
-                    fill="currentColor"
-                    viewBox="0 0 20 20"
-                  >
-                    <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                </div>
-              )}
-
-              {/* Unread count badge */}
-              {hasUnreadMessages && (
-                <div className="bg-purple-600 text-white text-xs rounded-full px-2 py-0.5 min-w-[20px] text-center">
-                  {chat.unreadCount > 99 ? "99+" : chat.unreadCount}
-                </div>
-              )}
-            </div>
-          </div>
+          {chat.starred && <span className="text-yellow-500">⭐</span>}
         </div>
       </div>
-
-      {/* Active indicator */}
-      {isActive && (
-        <div className="mt-2 w-full h-0.5 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full" />
-      )}
     </div>
   );
 };

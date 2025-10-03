@@ -1,7 +1,6 @@
 // ========================================
-// TypingArea.jsx - Simplified with Tailwind
+// TypingArea.jsx - Mobile Responsive Version
 // ========================================
-
 import React, { useState, useRef, useEffect } from "react";
 import { Smile, Send } from "lucide-react";
 
@@ -16,9 +15,19 @@ const TypingArea = ({
   const [message, setMessage] = useState("");
   const [isTyping, setIsTyping] = useState(false);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
-
+  const [isMobile, setIsMobile] = useState(false);
   const textareaRef = useRef(null);
   const typingTimeoutRef = useRef(null);
+
+  // Mobile detection
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    checkMobile();
+    window.addEventListener("resize", checkMobile);
+    return () => window.removeEventListener("resize", checkMobile);
+  }, []);
 
   const handleInputChange = (e) => {
     const value = e.target.value;
@@ -28,7 +37,7 @@ const TypingArea = ({
     if (textareaRef.current) {
       textareaRef.current.style.height = "auto";
       textareaRef.current.style.height =
-        Math.min(textareaRef.current.scrollHeight, 120) + "px";
+        Math.min(textareaRef.current.scrollHeight, isMobile ? 100 : 120) + "px";
     }
 
     // Handle typing indicators
@@ -54,7 +63,6 @@ const TypingArea = ({
   const handleSubmit = (e) => {
     e.preventDefault();
     const trimmedMessage = message.trim();
-
     if (!trimmedMessage) return;
 
     onSendMessage?.({
@@ -87,7 +95,6 @@ const TypingArea = ({
       const end = textarea.selectionEnd;
       const newMessage = message.slice(0, start) + emoji + message.slice(end);
       setMessage(newMessage);
-
       setTimeout(() => {
         textarea.setSelectionRange(start + emoji.length, start + emoji.length);
         textarea.focus();
@@ -140,7 +147,6 @@ const TypingArea = ({
         setShowEmojiPicker(false);
       }
     };
-
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [showEmojiPicker]);
@@ -155,98 +161,76 @@ const TypingArea = ({
 
   return (
     <div
-      className={`relative p-4 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 ${className}`}
+      className={`
+      border-t border-gray-700 bg-gray-800 p-3 md:p-4
+      ${isMobile ? "pb-6" : ""}
+      ${className}
+    `}
     >
-      {/* Main Input Form */}
-      <form onSubmit={handleSubmit} className="w-full">
-        <div className="flex items-end gap-3 bg-gray-50 dark:bg-gray-700 border-2 border-gray-200 dark:border-gray-600 rounded-3xl px-4 py-3 focus-within:border-blue-500 focus-within:bg-white dark:focus-within:bg-gray-800 transition-all duration-200">
-          {/* Text Input */}
+      {/* Emoji picker */}
+      {showEmojiPicker && (
+        <div className="emoji-picker absolute bottom-full left-0 right-0 mb-2 mx-3 md:mx-4">
+          <div className="bg-gray-700 rounded-lg p-3 shadow-lg border border-gray-600 max-h-32 overflow-y-auto">
+            <div className="grid grid-cols-8 md:grid-cols-10 gap-2">
+              {commonEmojis.map((emoji, index) => (
+                <button
+                  key={index}
+                  type="button"
+                  className="text-lg hover:bg-gray-600 rounded p-1 transition-colors"
+                  onClick={() => insertEmoji(emoji)}
+                >
+                  {emoji}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Input form */}
+      <form onSubmit={handleSubmit} className="flex items-end gap-2 md:gap-3">
+        {/* Emoji button */}
+        <button
+          type="button"
+          className="emoji-button flex items-center justify-center w-8 h-8 md:w-10 md:h-10 rounded-full text-gray-400 hover:text-white hover:bg-gray-700 transition-colors"
+          onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+        >
+          <Smile size={isMobile ? 16 : 20} />
+        </button>
+
+        {/* Message input */}
+        <div className="flex-1 relative">
           <textarea
             ref={textareaRef}
             value={message}
             onChange={handleInputChange}
-            onKeyDown={handleKeyPress}
+            onKeyPress={handleKeyPress}
             placeholder={placeholder}
             disabled={disabled}
-            className="flex-1 bg-transparent border-none outline-none resize-none 
-             text-gray-900 dark:text-gray-100 
-             placeholder-gray-500 dark:placeholder-gray-400
-             text-base leading-6 
-             min-h-[35px] max-h-[100px] 
-             px-2 py-3"
+            className={`
+              w-full bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400
+              focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent
+              resize-none overflow-hidden
+              ${
+                isMobile
+                  ? "px-3 py-2 text-sm max-h-24"
+                  : "px-4 py-3 text-base max-h-32"
+              }
+            `}
             rows="1"
-          /> 
-
-          {/* Action Buttons */}
-          <div className="flex items-center gap-2">
-            {/* Emoji Button */}
-            <button
-              type="button"
-              onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-              disabled={disabled}
-              className={`emoji-button flex items-center justify-center w-12 h-12 rounded-full border-none transition-all duration-200 ${
-                showEmojiPicker
-                  ? "bg-yellow-100 dark:bg-yellow-900/30 text-yellow-600 dark:text-yellow-400"
-                  : "bg-transparent text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-600 hover:text-gray-700 dark:hover:text-gray-300"
-              } ${
-                disabled
-                  ? "opacity-50 cursor-not-allowed"
-                  : "cursor-pointer hover:scale-105"
-              }`}
-              title="Add Emoji"
-            >
-              <Smile size={24} />
-            </button>
-
-            {/* Send Button */}
-            <button
-              type="submit"
-              disabled={disabled || !message.trim()}
-              className={`flex items-center justify-center w-12 h-12 rounded-full transition-all duration-200 ${
-                disabled || !message.trim()
-                  ? "bg-gray-300 dark:bg-gray-600 text-gray-500 cursor-not-allowed"
-                  : "bg-blue-500 hover:bg-blue-600 text-white cursor-pointer hover:scale-105 hover:shadow-lg hover:shadow-blue-500/30"
-              }`}
-              title="Send Message"
-            >
-              <Send size={20} />
-            </button>
-          </div>
+            style={{ minHeight: isMobile ? "36px" : "44px" }}
+          />
         </div>
+
+        {/* Send button */}
+        <button
+          type="submit"
+          disabled={!message.trim() || disabled}
+          className="flex items-center justify-center rounded-full transition-transform w-8 h-8"
+        >
+          <Send size={isMobile ? 14 : 16} />
+        </button>
       </form>
-
-      {/* Emoji Picker */}
-      {showEmojiPicker && (
-        <div className="emoji-picker absolute bottom-full right-4 mb-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-xl w-80 max-w-[calc(100vw-32px)] max-h-72 z-50 animate-in slide-in-from-bottom-2 duration-200">
-          {/* Header */}
-          <div className="flex items-center justify-between p-4 border-b border-gray-100 dark:border-gray-700">
-            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-              Choose an emoji
-            </span>
-            <button
-              type="button"
-              onClick={() => setShowEmojiPicker(false)}
-              className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 text-lg p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors"
-            >
-              ✕
-            </button>
-          </div>
-
-          {/* Emoji Grid */}
-          <div className="grid grid-cols-8 gap-1 p-3 max-h-48 overflow-y-auto">
-            {commonEmojis.map((emoji) => (
-              <button
-                key={emoji}
-                type="button"
-                onClick={() => insertEmoji(emoji)}
-                className="flex items-center justify-center w-8 h-8 text-lg hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-all duration-150 hover:scale-125"
-              >
-                {emoji}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
     </div>
   );
 };
