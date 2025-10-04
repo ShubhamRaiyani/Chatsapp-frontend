@@ -11,6 +11,7 @@ const ChatList = ({
   onNewChat,
   onLogout,
   user,
+  loadChats,
   className = "",
 }) => {
   // ✅ Use filtered chats based on active section
@@ -43,6 +44,7 @@ const ChatList = ({
   // Handle chat selection
   const handleChatSelect = (chat) => {
     onChatSelect?.(chat);
+    loadChats(); // Refresh chat list to update last message preview
   };
 
   // Handle logout

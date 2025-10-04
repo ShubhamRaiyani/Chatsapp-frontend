@@ -107,6 +107,8 @@ export function ChatProvider({ children }) {
           };
         });
 
+        loadChats(); // Refresh chat list to update last message preview
+
         // Update pagination info
         setMessagePagination((prev) => ({
           ...prev,

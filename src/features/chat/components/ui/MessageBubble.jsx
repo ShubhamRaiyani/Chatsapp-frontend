@@ -7,10 +7,9 @@ const MessageBubble = ({
   isOwn,
   showAvatar = true,
   isGrouped = false,
-  currentUserId,    
+  currentUserId,
   UsernameofChat,
 }) => {
-
   const messageType = message.type || message.messageType;
   const isSummary = messageType === "SUMMARY" || messageType === "Summary";
 
@@ -18,123 +17,141 @@ const MessageBubble = ({
     switch (messageType) {
       case "text":
       case "TEXT":
-        return <div className="message-text">{message.content}</div>;
+        return (
+          <div className="text-white text-sm leading-5 break-words">
+            {message.content}
+          </div>
+        );
 
       case "SUMMARY":
       case "Summary":
         return (
-          <div className="summary-message-content">
-            <div className="summary-header">
-              <div className="summary-icon">🤖</div>
-              <span className="summary-title">
+          <div className="summary-content">
+            <div className="flex items-center gap-2 mb-3 pb-2 border-b border-gray-600">
+              <div className="w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center text-xs">
+                🤖
+              </div>
+              <span className="text-blue-200 text-sm font-medium">
                 AI Chat Summary (Last 2 Days)
               </span>
             </div>
-            <div className="summary-text">{message.content}</div>
+            <div className="text-gray-100 text-sm leading-relaxed whitespace-pre-wrap">
+              {message.content}
+            </div>
           </div>
         );
 
       case "image":
       case "IMAGE":
         return (
-          <div className="message-image">
-            <img src={message.content || message.imageUrl} alt="Shared image" />
+          <div className="image-message">
+            <img
+              src={message.content || message.imageUrl}
+              alt="Shared image"
+              className="rounded-lg max-w-full h-auto max-h-96 object-cover"
+              loading="lazy"
+            />
           </div>
         );
 
       case "file":
       case "FILE":
         return (
-          <div className="message-file">
-            <div className="file-icon">📎</div>
-            <div className="file-info">
-              <span className="file-name">{message.fileName || "File"}</span>
-              <span className="file-size">{message.fileSize}</span>
+          <div className="flex items-center gap-3 p-2 bg-white/10 rounded-lg">
+            <div className="w-10 h-10 bg-blue-500 rounded-lg flex items-center justify-center text-white">
+              📎
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="text-white text-sm font-medium truncate">
+                {message.fileName || "File"}
+              </div>
+              {message.fileSize && (
+                <div className="text-gray-400 text-xs">{message.fileSize}</div>
+              )}
             </div>
           </div>
         );
 
       default:
-        return <div className="message-text">{message.content}</div>;
+        return (
+          <div className="text-white text-sm leading-5 break-words">
+            {message.content}
+          </div>
+        );
     }
   };
 
-
   return (
     <div
-      className={`message-bubble ${isOwn ? "own" : "other"} ${
-        isGrouped ? "grouped" : ""
-      } ${isSummary ? "summary-message" : ""}`}
+      className={`flex gap-2 mb-4 ${isOwn ? "justify-end" : "justify-start"} ${
+        isGrouped ? "mt-1" : "mt-4"
+      }`}
     >
+      {/* Avatar for received messages */}
       {showAvatar && !isOwn && !isGrouped && (
-        <Avatar user={message.sender} size="sm" className="message-avatar" />
+        <div className="flex-shrink-0 w-8 h-8">
+          <Avatar user={message.sender} size="sm" className="w-8 h-8" />
+        </div>
       )}
 
-      <div className="message-content">
+      {/* Spacer when no avatar but need alignment */}
+      {!showAvatar && !isOwn && !isGrouped && (
+        <div className="w-8 flex-shrink-0" />
+      )}
+
+      {/* Message content container */}
+      <div
+        className={`flex flex-col max-w-[75%] sm:max-w-[60%] ${
+          isOwn ? "items-end" : "items-start"
+        }`}
+      >
+        {/* Sender name for received messages in groups */}
         {!isOwn && !isGrouped && (
-          <div className="message-sender">
+          <div className="text-gray-400 text-xs mb-1 px-1">
             {message.sender?.username || UsernameofChat || "Unknown"}
           </div>
         )}
 
-        <div className={`message-body ${isSummary ? "summary-body" : ""}`}>
-          {renderMessageContent()}
+        {/* Message bubble */}
+        <div
+          className={`relative px-4 py-3 rounded-2xl shadow-sm ${
+            isSummary
+              ? "bg-gradient-to-r from-blue-600 to-blue-700 max-w-none w-full"
+              : isOwn
+              ? "bg-blue-500 text-white rounded-br-md"
+              : "bg-gray-700 text-white rounded-bl-md"
+          } ${messageType === "image" || messageType === "IMAGE" ? "p-1" : ""}`}
+        >
+          {/* Message content */}
+          <div
+            className={
+              messageType === "image" || messageType === "IMAGE" ? "" : "mb-1"
+            }
+          >
+            {renderMessageContent()}
+          </div>
 
-          <div className="message-footer">
-            <span className="message-time">
+          {/* Message timestamp */}
+          <div
+            className={`flex items-center justify-end gap-1 mt-1 ${
+              messageType === "image" || messageType === "IMAGE"
+                ? "absolute bottom-2 right-2 bg-black/50 px-2 py-1 rounded-full"
+                : ""
+            }`}
+          >
+            <span
+              className={`text-xs leading-none ${
+                isSummary
+                  ? "text-blue-100"
+                  : messageType === "image" || messageType === "IMAGE"
+                  ? "text-white"
+                  : "text-gray-300"
+              }`}
+            >
               {formatMessageTime(message.sentAt || message.createdAt)}
             </span>
-
-            {isOwn && <></>}
           </div>
         </div>
-
-        {/* {renderReactions()} */}
-
-        {/* {showActions && !isSummary && (
-          <div className="message-actions">
-            <button
-              onClick={() => setShowReactions(!showReactions)}
-              className="action-button"
-              title="React"
-            >
-              😊
-            </button>
-
-            {isOwn && (
-              <>
-                <button
-                  onClick={handleEdit}
-                  className="action-button"
-                  title="Edit"
-                >
-                  ✏️
-                </button>
-                <button
-                  onClick={handleDelete}
-                  className="action-button"
-                  title="Delete"
-                >
-                  🗑️
-                </button>
-              </>
-            )}
-          </div>
-        )} */}
-
-        {/* {showReactions && (
-          <div className="reaction-picker">
-            {["👍", "❤️", "😂", "😮", "😢", "😡"].map((emoji) => (
-              <button
-                key={emoji}
-                onClick={() => handleReaction(emoji)}
-                className="reaction-option"
-              >
-                {emoji}
-              </button>
-            ))}
-          </div>
-        )} */}
       </div>
     </div>
   );

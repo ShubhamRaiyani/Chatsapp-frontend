@@ -132,20 +132,20 @@ const ChatArea = ({ chat, currentUserId, onBack, className = "" }) => {
   }
 
   return (
-    <div className={`flex flex-col h-full relative ${className}`}>
+    <div className={`flex flex-col h-full w w-full relative ${className}`}>
       {/* Chat Top Bar */}
-      <ChatTopBar
-        chat={chat}
-        onStartCall={() => console.log("Start call")}
-        onStartVideoCall={() => console.log("Start video call")}
-        onShowInfo={handleShowInfo}
-        onShowMembers={handleShowMembers}
-        onBack={onBack}
-        onSummarize={() => handleSummarizeChat(chat.id)}
-        onLeaveGroup={handleLeaveGroup}
-        summaryLoading={summaryLoading}
-        className="flex-shrink-0"
-      />
+      <div className="flex-shrink-0 border-b border-gray-700">
+        <ChatTopBar
+          chat={chat}
+          onStartCall={() => console.log("Starting call")}
+          onStartVideoCall={() => console.log("Starting video call")}
+          onShowInfo={handleShowInfo}
+          onShowMembers={handleShowMembers}
+          onBack={onBack}
+          onSummarize={() => handleSummarizeChat(chat?.email)}
+          summaryLoading={summaryLoading}
+        />
+      </div>
 
       {/* Connection Status */}
       {!isConnected && (
@@ -169,48 +169,46 @@ const ChatArea = ({ chat, currentUserId, onBack, className = "" }) => {
       )}
 
       {/* Message List */}
-      <div className="flex-1 overflow-hidden">
+      <div className="flex-1 min-h-0 relative">
         <MessageList
           messages={messages}
           currentUserId={currentUserId}
           typingUsers={typingUsers}
-          onEditMessage={(messageId, newContent) => {
-            console.log("Edit message:", messageId, newContent);
-          }}
+          onEditMessage={() => {}}
           onDeleteMessage={deleteMessage}
           onReactToMessage={reactToMessage}
           onLoadMore={loadMoreMessages}
           hasMore={hasMoreMessages}
           loading={loading}
-          UsernameofChat={chat.displayName}
+          UsernameofChat={chat?.displayName}
           className="h-full"
         />
       </div>
 
       {/* Typing Area */}
+      <div className="flex-shrink-0 border-t border-gray-700">
       <TypingArea
         onSendMessage={handleSendMessage}
         onStartTyping={startTyping}
         onStopTyping={stopTyping}
         disabled={!isConnected}
-        placeholder={
-          chat.isGroup
-            ? `Message ${chat.displayName}...`
-            : `Message ${chat.displayName}...`
-        }
-        className="flex-shrink-0"
+        placeholder={`Message ${chat?.displayName || "..."}`}
       />
+    </div>
 
-      {/* ✅ NEW: Chat Info Panel */}
-      <ChatInfoPanel
-        chat={chat}
-        isOpen={showChatInfo}
-        onClose={handleCloseChatInfo}
-        currentUserId={currentUserId}
-        onMuteChat={handleMuteChat}
-        onDeleteChat={handleDeleteChat}
-        onLeaveGroup={handleLeaveGroup}
-      />
+    {/* Chat Info Panel - Mobile overlay */}
+    {showChatInfo && (
+      <div className="absolute inset-0 z-50 bg-gray-900">
+        <ChatInfoPanel
+          chat={chat}
+          currentUserId={currentUserId}
+          onClose={handleCloseChatInfo}
+          onMute={handleMuteChat}
+          onDelete={handleDeleteChat}
+          onLeave={handleLeaveGroup}
+        />
+      </div>
+    )}
     </div>
   );
 };

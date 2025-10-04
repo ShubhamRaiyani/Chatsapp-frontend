@@ -16,7 +16,7 @@ const Dashboard = ({ className = "" }) => {
   const [showNewChatModal, setShowNewChatModal] = useState(false);
 
   // Get chat context for creating chats
-  const { createPersonalChat, createGroupChat, selectChat, chats } = useChat();
+  const { createPersonalChat, createGroupChat, selectChat, chats, refreshChats ,loadChats} = useChat();
 
   // Calculate chat counts from actual data
   const getChatCounts = () => {
@@ -69,6 +69,7 @@ const Dashboard = ({ className = "" }) => {
     if (isMobile) {
       setShowChatList(false);
     }
+    refreshChats();
   };
 
   // Handle back to chat list (mobile)
@@ -166,7 +167,7 @@ const Dashboard = ({ className = "" }) => {
     // Mobile view
     activeChat ? (
       // Chat open: show ChatArea with Back button
-      <div className="h-screen w-full flex flex-col bg-gray-900">
+      <div className="h-screen h-[100vh] h-[100svh] w-full flex flex-col bg-gray-900 overflow-hidden">
         <ChatArea
           chat={activeChat}
           currentUserId={user?.email}
@@ -175,17 +176,17 @@ const Dashboard = ({ className = "" }) => {
       </div>
     ) : (
       // No chat selected: show only the chat list
-      <div className="h-screen w-full bg-gray-900">
-        <ChatList
-          chats={chats}
-          currentUserId={user?.email}
-          activeChat={activeChat}
-          onChatSelect={handleChatSelect}
-          onNewChat={handleNewChat}
-          user={user}
-          activeSection={activeSection}
-        />
-      </div>
+      <div className="h-screen h-[100vh] h-[100svh] w-full bg-gray-900 overflow-hidden">
+      <ChatList
+        chats={chats}
+        currentUserId={user?.email}
+        activeChat={activeChat}
+        onChatSelect={handleChatSelect}
+        onNewChat={handleNewChat}
+        user={user}
+        activeSection={activeSection}
+      />
+    </div>
     )
   ) : (
     // Desktop/tablet view: original layout
@@ -212,7 +213,8 @@ const Dashboard = ({ className = "" }) => {
           onChatSelect={handleChatSelect}
           onNewChat={handleNewChat}
           user={user}
-          activeSection={activeSection}
+            activeSection={activeSection}
+            loadChats={loadChats}
         />
       </div>
 

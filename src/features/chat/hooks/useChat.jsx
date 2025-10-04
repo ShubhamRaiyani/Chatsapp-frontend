@@ -163,6 +163,12 @@ export function useChat(chatId = null, filterType = null) {
     [leaveGroupFromProvider]
   );
 
+  // const refreshChats = async () => {
+  //   const updatedChats = await ChatAPI.fetchChats();
+  //   setChats(updatedChats);
+  // };
+
+
   return {
     // Data
     chats: filteredChats, // ✅ Filtered chats based on type (now with full details)
