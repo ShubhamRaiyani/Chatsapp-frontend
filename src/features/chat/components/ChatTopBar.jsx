@@ -123,7 +123,10 @@ const ChatTopBar = ({
         {/* Summary button */}
         {onSummarize && (
           <button
-            onClick={() => onSummarize(chat.id)}
+            onClick={() => {
+              onSummarize(chat.id)
+              console.log("Summarize button clicked for chat ID:", chat.id);
+            }}
             disabled={summaryLoading}
             className="
               relative p-3 rounded-full

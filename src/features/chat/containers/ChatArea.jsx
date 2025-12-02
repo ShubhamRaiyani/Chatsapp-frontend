@@ -21,7 +21,7 @@ const ChatArea = ({ chat, currentUserId, onBack, className = "" }) => {
     refreshChats,
     refreshMessages,
     leaveGroup,
-  } = useChat(chat?.email);
+  } = useChat(chat?.id);
 
   const { typingUsers, startTyping, stopTyping } = useTyping(chat?.email);
 
@@ -36,11 +36,12 @@ const ChatArea = ({ chat, currentUserId, onBack, className = "" }) => {
 
   const handleSummarizeChat = async (chatId) => {
     if (!chatId || summaryLoading) return;
-
+    console.log("Starting chat summary for chat ID:", chatId);
     setSummaryLoading(true);
     setSummaryError(null);
 
     try {
+      console.log("Generating summary for chat:", chatId);
       const summary = await ChatAPI.generateChatSummary(chatId);
 
       // ✅ REFRESH MESSAGES TO SHOW NEW SUMMARY
@@ -142,7 +143,7 @@ const ChatArea = ({ chat, currentUserId, onBack, className = "" }) => {
           onShowInfo={handleShowInfo}
           onShowMembers={handleShowMembers}
           onBack={onBack}
-          onSummarize={() => handleSummarizeChat(chat?.email)}
+          onSummarize={(chatId) => handleSummarizeChat(chatId)}
           summaryLoading={summaryLoading}
         />
       </div>
@@ -187,28 +188,28 @@ const ChatArea = ({ chat, currentUserId, onBack, className = "" }) => {
 
       {/* Typing Area */}
       <div className="flex-shrink-0 border-t border-gray-700">
-      <TypingArea
-        onSendMessage={handleSendMessage}
-        onStartTyping={startTyping}
-        onStopTyping={stopTyping}
-        disabled={!isConnected}
-        placeholder={`Message ${chat?.displayName || "..."}`}
-      />
-    </div>
-
-    {/* Chat Info Panel - Mobile overlay */}
-    {showChatInfo && (
-      <div className="absolute inset-0 z-50 bg-gray-900">
-        <ChatInfoPanel
-          chat={chat}
-          currentUserId={currentUserId}
-          onClose={handleCloseChatInfo}
-          onMute={handleMuteChat}
-          onDelete={handleDeleteChat}
-          onLeave={handleLeaveGroup}
+        <TypingArea
+          onSendMessage={handleSendMessage}
+          onStartTyping={startTyping}
+          onStopTyping={stopTyping}
+          disabled={!isConnected}
+          placeholder={`Message ${chat?.displayName || "..."}`}
         />
       </div>
-    )}
+
+      {/* Chat Info Panel - Mobile overlay */}
+      {showChatInfo && (
+        <div className="absolute inset-0 z-50 bg-gray-900">
+          <ChatInfoPanel
+            chat={chat}
+            currentUserId={currentUserId}
+            onClose={handleCloseChatInfo}
+            onMute={handleMuteChat}
+            onDelete={handleDeleteChat}
+            onLeave={handleLeaveGroup}
+          />
+        </div>
+      )}
     </div>
   );
 };

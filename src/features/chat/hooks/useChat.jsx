@@ -1,6 +1,6 @@
-// features/chat/hooks/useChat.js - Optimized without chatDetails
+// features/chat/hooks/useChat.js
 
-import { useCallback, useEffect, useState, useContext, useMemo } from "react";
+import { useCallback, useState, useContext, useMemo } from "react";
 import ChatContext from "../context/ChatContext";
 
 export function useChat(chatId = null, filterType = null) {
@@ -10,52 +10,54 @@ export function useChat(chatId = null, filterType = null) {
     throw new Error("useChat must be used within a ChatProvider");
   }
 
-  // Destructure context values
   const {
+    // state from provider
     chats,
-    allMessages,
-    // ✅ REMOVED: chatDetails - no longer needed since chat has all details
+    messages: currentMessages, // messages for selectedChat
+    allMessages, // { [chatId]: [...] }
     loading,
     error,
     connected,
     sendingMessage,
-    pagination,
-    loadMoreMessages: loadMoreFromProvider,
+    pagination: currentPagination, // pagination ONLY for selectedChat
+
+    // actions from provider
+    loadMoreMessages: loadMoreFromProvider, // works on selectedChat
     sendMessage: sendFromProvider,
-    leaveGroup : leaveGroupFromProvider,
+    leaveGroup: leaveGroupFromProvider,
     createPersonalChat,
     createGroupChat,
     selectChat,
     currentUser,
     refreshChats,
-    clearError,
     refreshMessages,
-    // ✅ REMOVED: loadChatDetails - no longer needed
+    // clearError might exist in your real provider; if yes, you can also pull it
   } = context;
 
-  // Local state for this hook instance
-  const [hasMoreMessages, setHasMoreMessages] = useState(true);
+  // Local loading just for "load more"
   const [messageLoading, setMessageLoading] = useState(false);
 
-  // ✅ Filter chats based on type
+  // ===========================
+  // Filters / counts
+  // ===========================
+
   const filteredChats = useMemo(() => {
     if (!filterType || filterType === "chats") {
-      return chats; // Return all chats
+      return chats;
     }
 
     return chats.filter((chat) => {
       switch (filterType) {
         case "direct":
-          return !chat.isGroup; // Personal/direct messages
+          return !chat.isGroup;
         case "groups":
-          return chat.isGroup; // Group chats
+          return chat.isGroup;
         default:
-          return true; // All chats
+          return true;
       }
     });
   }, [chats, filterType]);
 
-  // ✅ Get chat counts by category
   const chatCounts = useMemo(() => {
     const direct = chats.filter((chat) => !chat.isGroup).length;
     const groups = chats.filter((chat) => chat.isGroup).length;
@@ -66,59 +68,61 @@ export function useChat(chatId = null, filterType = null) {
     };
   }, [chats]);
 
-  // Get messages for the specific chatId or current selected chat
-  const chatMessages = chatId
-    ? allMessages[chatId] || []
-    : context.messages || [];
+  // ===========================
+  // Messages for THIS hook
+  // ===========================
 
-  // Load more messages for pagination with loading state
+  // If chatId is given, use allMessages[chatId]; else fall back to currentMessages
+  const chatMessages = useMemo(
+    () => (chatId ? allMessages[chatId] || [] : currentMessages || []),
+    [chatId, allMessages, currentMessages]
+  );
+
+  // Has more messages? (comes directly from provider for selected chat)
+  const hasMoreMessages = !!currentPagination?.hasMore;
+
+  // ===========================
+  // Load more (uses provider's selectedChat)
+  // ===========================
+
   const loadMoreMessages = useCallback(async () => {
-    if (!chatId || messageLoading) return;
-
-    const chatPagination = pagination;
-    if (!chatPagination?.hasMore) return;
+    // if provider says no more, or already loading, do nothing
+    if (!hasMoreMessages || messageLoading) return;
 
     try {
       setMessageLoading(true);
+      // IMPORTANT: provider implementation uses selectedChat internally
       await loadMoreFromProvider();
     } catch (err) {
       console.error("Failed to load more messages:", err);
     } finally {
       setMessageLoading(false);
     }
-  }, [chatId, messageLoading, loadMoreFromProvider, pagination]);
+  }, [hasMoreMessages, messageLoading, loadMoreFromProvider]);
 
-  // Send message wrapper
+  // ===========================
+  // Send / leave / helpers
+  // ===========================
+
   const sendMessage = useCallback(
     async (content, receiverEmail = null) => {
       return await sendFromProvider(content, receiverEmail);
     },
     [sendFromProvider]
   );
-  // const sendMessage = useCallback(
-  //   async (content, receiverEmail, otherParticipantEmails = []) => {
-  //     console.log("🔧 useChat sendMessage called with:", {
-  //       content,
-  //       receiverEmail,
-  //       otherParticipantEmails,
-  //     });
-  //     return await sendFromProvider(content, receiverEmail, otherParticipantEmails);
-  //   },
-  //   [sendFromProvider]
-  // );
 
-  // Update hasMoreMessages state as pagination changes
-  useEffect(() => {
-    if (!chatId) {
-      setHasMoreMessages(false);
-      return;
-    }
+  const leaveGroup = useCallback(
+    async (groupId) => {
+      try {
+        return await leaveGroupFromProvider(groupId);
+      } catch (err) {
+        console.error("Failed to leave group:", err);
+        throw err;
+      }
+    },
+    [leaveGroupFromProvider]
+  );
 
-    const chatPagination = pagination;
-    setHasMoreMessages(!!chatPagination?.hasMore);
-  }, [pagination, chatId]);
-
-  // Helper functions for components
   const getChatById = useCallback(
     (id) => chats.find((chat) => chat.id === id),
     [chats]
@@ -126,7 +130,6 @@ export function useChat(chatId = null, filterType = null) {
 
   const getUnreadCount = useCallback(
     (id) => {
-      // ✅ Now use unreadCount from ChatDTO
       const chat = chats.find((c) => c.id === id);
       return chat?.unreadCount || 0;
     },
@@ -151,61 +154,49 @@ export function useChat(chatId = null, filterType = null) {
     },
     [chats]
   );
-  const leaveGroup = useCallback(
-    async (groupId) => {
-      try {
-        return await leaveGroupFromProvider(groupId);
-      } catch (err) {
-        console.error("Failed to leave group:", err);
-        throw err;
-      }
-    },
-    [leaveGroupFromProvider]
-  );
 
-  // const refreshChats = async () => {
-  //   const updatedChats = await ChatAPI.fetchChats();
-  //   setChats(updatedChats);
-  // };
-
+  // ===========================
+  // Return API
+  // ===========================
 
   return {
     // Data
-    chats: filteredChats, // ✅ Filtered chats based on type (now with full details)
-    allChats: chats, // ✅ All chats unfiltered (now with full details)
-    chatCounts, // ✅ Counts by category
-    // ✅ REMOVED: chatDetails - no longer needed since chat has all details
+    chats: filteredChats,
+    allChats: chats,
+    chatCounts,
     messages: chatMessages,
     allMessages,
+
+    // Loading / connection
     loading: loading || messageLoading,
-    leaveGroup,
     error,
     connected,
-    hasMoreMessages,
     sendingMessage,
-    pagination,
+
+    // Pagination (for selected chat)
+    pagination: currentPagination,
+    hasMoreMessages,
 
     // Actions
-    sendMessage, // ✅ Uses receiverEmail directly from chat object
+    sendMessage,
     loadMoreMessages,
+    leaveGroup,
     createPersonalChat,
     createGroupChat,
-    selectChat, // ✅ Simplified - no separate details loading
+    selectChat,
     refreshChats,
-    clearError,
-    // ✅ REMOVED: loadChatDetails - no longer needed
+    refreshMessages,
 
-    // Helper functions
+    // Helpers
     getChatById,
-    getUnreadCount, // ✅ Now uses unreadCount from ChatDTO
+    getUnreadCount,
     getChatMessages,
-    getChatsByType, // ✅ Get chats by specific type
+    getChatsByType,
 
-    // Current user info
+    // Current user
     currentUser,
 
-    refreshMessages,
-    // Raw context access if needed
+    // Raw context (if needed)
     context,
   };
 }

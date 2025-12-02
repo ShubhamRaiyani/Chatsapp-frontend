@@ -13,8 +13,8 @@ const MessageList = ({
   onDeleteMessage,
   onReactToMessage,
   onLoadMore,
-  hasMore = false,
-  loading = false,
+  hasMore ,
+  loading ,
   className = "",
   UsernameofChat,
 }) => {
@@ -40,19 +40,23 @@ const MessageList = ({
     });
   };
 
-  const handleScroll = () => {
+  const handleScroll = React.useCallback(() => {
     if (!containerRef.current) return;
 
     const { scrollTop, scrollHeight, clientHeight } = containerRef.current;
+    console.log("scrollTop:", scrollTop);
+
     const atBottom = scrollHeight - scrollTop <= clientHeight + 100;
     setIsAtBottom(atBottom);
     setShowScrollButton(!atBottom && messages.length > 10);
 
-    // Load more messages when scrolled to top
-    if (scrollTop === 0 && hasMore && !loading && onLoadMore) {
+    if (scrollTop <= 50 && hasMore && !loading && onLoadMore) {
+      console.log("🔼 Reached top, calling onLoadMore()");
       onLoadMore();
     }
-  };
+  }, [hasMore, loading, messages.length, onLoadMore]);
+
+
 
   useEffect(() => {
     if (isAtBottom) {
@@ -66,7 +70,7 @@ const MessageList = ({
       container.addEventListener("scroll", handleScroll);
       return () => container.removeEventListener("scroll", handleScroll);
     }
-  }, [hasMore, loading, messages.length]);
+  }, [hasMore, loading, messages.length, handleScroll]);
 
   const groupedMessages = groupMessagesByDate(messages);
 

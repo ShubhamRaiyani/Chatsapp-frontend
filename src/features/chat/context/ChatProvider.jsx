@@ -128,7 +128,7 @@ export function ChatProvider({ children }) {
         }
       }
     },
-    []
+    [loadChats]
   );
   const refreshMessages = useCallback(
     async (chatId, isGroup = false) => {
@@ -301,7 +301,7 @@ export function ChatProvider({ children }) {
 
       return chat; // Return the chat object itself (already has all details)
     },
-    [connected, messages, loadMessages, loadChats] // ✅ Removed loadChatDetails dependency
+    [connected, messages, loadMessages] // ✅ Removed loadChatDetails dependency
   );
 
   // ✅ UPDATED: Send a message using receiverEmail from chat object directly
@@ -348,7 +348,7 @@ export function ChatProvider({ children }) {
         loadChats();
       }
     },
-    [selectedChat, connected, user]
+    [selectedChat, connected, user, loadChats]
   );
 
   // Create a new personal chat
@@ -408,18 +408,18 @@ export function ChatProvider({ children }) {
     if (!selectedChat || !isMounted.current) return;
 
     const pagination = messagePagination[selectedChat.id];
-    if (!pagination?.hasMore) return;
+    console.log("loadMoreMessages called. Pagination:", pagination);
+
+    if (!pagination?.hasMore) {
+      console.log("❌ No more pages to load");
+      return;
+    }
 
     const nextPage = pagination.currentPage + 1;
+    console.log("➡️ Loading page:", nextPage);
     await loadMessages(selectedChat.id, selectedChat.isGroup, nextPage);
   }, [selectedChat, messagePagination, loadMessages]);
 
-  // Clear error state
-  const clearError = useCallback(() => {
-    if (isMounted.current) {
-      setError(null);
-    }
-  }, []);
 
   const leaveGroup = useCallback(
     async (groupId) => {
@@ -502,7 +502,7 @@ export function ChatProvider({ children }) {
     createPersonalChat,
     createGroupChat,
     loadMoreMessages,
-    clearError,
+    
     leaveGroup,
     // ✅ REMOVED: loadChatDetails - no longer needed
 
