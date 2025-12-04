@@ -39,7 +39,6 @@ const Dashboard = ({ className = "" }) => {
   useEffect(() => {
     const checkMobile = () => {
       const mobile = window.innerWidth < 768;
-      const tablet = window.innerWidth < 1024 && window.innerWidth >= 768;
       setIsMobile(mobile);
 
       if (mobile) {

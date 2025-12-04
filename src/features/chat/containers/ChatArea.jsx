@@ -187,6 +187,7 @@ const ChatArea = ({ chat, currentUserId, onBack, className = "" }) => {
       {/* Message List */}
       <div className="flex-1 min-h-0 relative">
         <MessageList
+          key={chat.id} // ✅ force new MessageList per chat
           messages={messages}
           currentUserId={currentUserId}
           typingUsers={typingUsers}
@@ -196,7 +197,7 @@ const ChatArea = ({ chat, currentUserId, onBack, className = "" }) => {
           onLoadMore={loadMoreMessages}
           hasMore={hasMoreMessages}
           loading={loading}
-          UsernameofChat={selectedChat?.displayName}
+          UsernameofChat={chat?.displayName}
           className="h-full"
         />
       </div>
@@ -215,14 +216,14 @@ const ChatArea = ({ chat, currentUserId, onBack, className = "" }) => {
       {/* Chat Info Panel - Mobile overlay */}
       {showChatInfo && (
         // <div className="absolute inset-0 z-50 bg-gray-900">
-          <ChatInfoPanel
-            chat={chat}
-            isOpen={showChatInfo}
-            currentUserId={currentUserId}
-            onClose={handleCloseChatInfo}
-            onMuteChat={handleMuteChat}
-            onLeaveGroup={handleLeaveGroup}
-          />
+        <ChatInfoPanel
+          chat={chat}
+          isOpen={showChatInfo}
+          currentUserId={currentUserId}
+          onClose={handleCloseChatInfo}
+          onMuteChat={handleMuteChat}
+          onLeaveGroup={handleLeaveGroup}
+        />
         // </div>
       )}
     </div>
