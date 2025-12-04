@@ -13,6 +13,7 @@ export function useChat(chatId = null, filterType = null) {
   const {
     // state from provider
     chats,
+    selectedChat,
     messages: currentMessages, // messages for selectedChat
     allMessages, // { [chatId]: [...] }
     loading,
@@ -162,6 +163,7 @@ export function useChat(chatId = null, filterType = null) {
   return {
     // Data
     chats: filteredChats,
+    selectedChat,
     allChats: chats,
     chatCounts,
     messages: chatMessages,

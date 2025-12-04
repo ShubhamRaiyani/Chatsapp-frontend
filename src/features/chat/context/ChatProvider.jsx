@@ -68,55 +68,128 @@ export function ChatProvider({ children }) {
 
   // In your ChatProvider.jsx - Update loadMessages function:
 
+  // const loadMessages = useCallback(
+  //   async (chatId, isGroup = false, page = 0) => {
+  //     if (!chatId || !isMounted.current) return;
+
+  //     try {
+  //       console.log(`📥 Loading messages for chat ${chatId}, page ${page}`);
+
+  //       const messagesData = isGroup
+  //         ? await ChatAPI.getMessagesForGroup(chatId, page, 20)
+  //         : await ChatAPI.getMessagesForChat(chatId, page, 20);
+
+  //       if (!isMounted.current) return;
+
+  //       console.log("📄 Loaded messages page:", messagesData);
+
+  //       setMessages((prevMessages) => {
+  //         const existingMessages = prevMessages[chatId] || [];
+
+  //         if (page === 0) {
+  //           // ✅ First page: Replace all messages and REVERSE them
+  //           // Since backend sends ASC, we reverse to show newest at bottom
+  //           const reversedMessages = [
+  //             ...(messagesData.content || []),
+  //           ].reverse();
+  //           return {
+  //             ...prevMessages,
+  //             [chatId]: reversedMessages,
+  //           };
+  //         }
+
+  //         // ✅ Pagination: Prepend older messages to the BEGINNING
+  //         // Since we're loading older messages (ASC order), they go at the start
+  //         const olderMessages = [...(messagesData.content || [])].reverse();
+  //         return {
+  //           ...prevMessages,
+  //           [chatId]: [...olderMessages, ...existingMessages], // Older messages first
+  //         };
+  //       });
+
+  //       loadChats(); // Refresh chat list to update last message preview
+
+  //       // Update pagination info
+  //       setMessagePagination((prev) => ({
+  //         ...prev,
+  //         [chatId]: {
+  //           currentPage: messagesData.number || 0,
+  //           totalPages: messagesData.totalPages || 1,
+  //           hasMore: !messagesData.last,
+  //           totalElements: messagesData.totalElements || 0,
+  //         },
+  //       }));
+
+  //       return messagesData;
+  //     } catch (err) {
+  //       if (isMounted.current) {
+  //         console.error("Error loading messages:", err);
+  //         setError("Failed to load messages");
+  //       }
+  //     }
+  //   },
+  //   [loadChats]
+  // );
   const loadMessages = useCallback(
-    async (chatId, isGroup = false, page = 0) => {
+    async (chatId, isGroup = false, beforeMessageId = null) => {
       if (!chatId || !isMounted.current) return;
 
       try {
-        console.log(`📥 Loading messages for chat ${chatId}, page ${page}`);
+        console.log(
+          `📥 Loading messages for chat ${chatId}, cursor:`,
+          beforeMessageId
+        );
 
+        // 🔹 Call cursor-based API
         const messagesData = isGroup
-          ? await ChatAPI.getMessagesForGroup(chatId, page, 20)
-          : await ChatAPI.getMessagesForChat(chatId, page, 20);
+          ? await ChatAPI.getMessagesCursorForGroup(chatId, beforeMessageId, 20)
+          : await ChatAPI.getMessagesCursorForChat(chatId, beforeMessageId, 20);
 
         if (!isMounted.current) return;
 
-        console.log("📄 Loaded messages page:", messagesData);
+        console.log("📄 Loaded messages batch:", messagesData);
+
+        const batch = messagesData.messages || [];
 
         setMessages((prevMessages) => {
           const existingMessages = prevMessages[chatId] || [];
 
-          if (page === 0) {
-            // ✅ First page: Replace all messages and REVERSE them
-            // Since backend sends ASC, we reverse to show newest at bottom
-            const reversedMessages = [
-              ...(messagesData.content || []),
-            ].reverse();
-            return {
-              ...prevMessages,
-              [chatId]: reversedMessages,
-            };
+          // 🔹 Decide how to merge based on cursor
+          let merged;
+          if (!beforeMessageId) {
+            // First load: only this batch
+            merged = batch;
+          } else {
+            // Older messages: prepend before existing
+            merged = [...batch, ...existingMessages];
           }
 
-          // ✅ Pagination: Prepend older messages to the BEGINNING
-          // Since we're loading older messages (ASC order), they go at the start
-          const olderMessages = [...(messagesData.content || [])].reverse();
+          // 🔹 Deduplicate by messageId (or fallback to id)
+          const seen = new Set();
+          const deduped = [];
+
+          for (const msg of merged) {
+            const key = msg.messageId || msg.id; // important!
+            if (key && seen.has(key)) continue;
+            if (key) seen.add(key);
+            deduped.push(msg);
+          }
+
           return {
             ...prevMessages,
-            [chatId]: [...olderMessages, ...existingMessages], // Older messages first
+            [chatId]: deduped,
           };
         });
 
-        loadChats(); // Refresh chat list to update last message preview
+        // Optional: refresh chat list for lastMessage, lastActivity
+        loadChats();
 
-        // Update pagination info
+        // ✅ Save cursor-based pagination info per chat
         setMessagePagination((prev) => ({
           ...prev,
           [chatId]: {
-            currentPage: messagesData.number || 0,
-            totalPages: messagesData.totalPages || 1,
-            hasMore: !messagesData.last,
-            totalElements: messagesData.totalElements || 0,
+            hasMore: !!messagesData.hasMore,
+            cursor: messagesData.nextCursor || null, // UUID of oldest in this batch
           },
         }));
 
@@ -130,12 +203,23 @@ export function ChatProvider({ children }) {
     },
     [loadChats]
   );
+
+  // const refreshMessages = useCallback(
+  //   async (chatId, isGroup = false) => {
+  //     if (!chatId || !isMounted.current) return;
+
+  //     console.log(`🔄 Refreshing messages for chat ${chatId}`);
+  //     await loadMessages(chatId, isGroup, 0); // Reload page 0 (latest messages)
+  //   },
+  //   [loadMessages]
+  // );
   const refreshMessages = useCallback(
     async (chatId, isGroup = false) => {
       if (!chatId || !isMounted.current) return;
 
       console.log(`🔄 Refreshing messages for chat ${chatId}`);
-      await loadMessages(chatId, isGroup, 0); // Reload page 0 (latest messages)
+      // 🔹 Initial load = no cursor
+      await loadMessages(chatId, isGroup, null);
     },
     [loadMessages]
   );
@@ -267,6 +351,43 @@ export function ChatProvider({ children }) {
   }, [isAuthenticated, user, generateSessionId, loadChats]);
 
   // ✅ SIMPLIFIED: Select a chat (no need to load details separately)
+  // const selectChat = useCallback(
+  //   async (chat) => {
+  //     if (!chat || !connected || !isMounted.current) return;
+
+  //     console.log(
+  //       "🎯 Selecting chat (with full details already loaded):",
+  //       chat
+  //     );
+  //     setSelectedChat(chat);
+
+  //     // ✅ REMOVED: loadChatDetails step - all details are already in chat object
+
+  //     // ✅ Subscribe to WebSocket topic for this chat
+  //     const subscription = webSocketService.subscribeToChat(
+  //       chat.id,
+  //       chat.isGroup
+  //     );
+
+  //     if (subscription) {
+  //       console.log(`✅ Subscribed to chat: ${chat.id}`);
+
+  //       // ✅ Load messages if not already cached
+  //       if (!messages[chat.id]) {
+  //         await loadMessages(chat.id, chat.isGroup, 0);
+  //       }
+  //     } else {
+  //       console.error("❌ Failed to subscribe to chat");
+  //       if (isMounted.current) {
+  //         setError("Failed to join chat");
+  //       }
+  //     }
+
+  //     return chat; // Return the chat object itself (already has all details)
+  //   },
+  //   [connected, messages, loadMessages] // ✅ Removed loadChatDetails dependency
+  // );
+
   const selectChat = useCallback(
     async (chat) => {
       if (!chat || !connected || !isMounted.current) return;
@@ -277,9 +398,6 @@ export function ChatProvider({ children }) {
       );
       setSelectedChat(chat);
 
-      // ✅ REMOVED: loadChatDetails step - all details are already in chat object
-
-      // ✅ Subscribe to WebSocket topic for this chat
       const subscription = webSocketService.subscribeToChat(
         chat.id,
         chat.isGroup
@@ -290,7 +408,7 @@ export function ChatProvider({ children }) {
 
         // ✅ Load messages if not already cached
         if (!messages[chat.id]) {
-          await loadMessages(chat.id, chat.isGroup, 0);
+          await loadMessages(chat.id, chat.isGroup, null);
         }
       } else {
         console.error("❌ Failed to subscribe to chat");
@@ -299,9 +417,9 @@ export function ChatProvider({ children }) {
         }
       }
 
-      return chat; // Return the chat object itself (already has all details)
+      return chat;
     },
-    [connected, messages, loadMessages] // ✅ Removed loadChatDetails dependency
+    [connected, messages, loadMessages]
   );
 
   // ✅ UPDATED: Send a message using receiverEmail from chat object directly
@@ -404,6 +522,22 @@ export function ChatProvider({ children }) {
   );
 
   // Load more messages for pagination
+  // const loadMoreMessages = useCallback(async () => {
+  //   if (!selectedChat || !isMounted.current) return;
+
+  //   const pagination = messagePagination[selectedChat.id];
+  //   console.log("loadMoreMessages called. Pagination:", pagination);
+
+  //   if (!pagination?.hasMore) {
+  //     console.log("❌ No more pages to load");
+  //     return;
+  //   }
+
+  //   const nextPage = pagination.currentPage + 1;
+  //   console.log("➡️ Loading page:", nextPage);
+  //   await loadMessages(selectedChat.id, selectedChat.isGroup, nextPage);
+  // }, [selectedChat, messagePagination, loadMessages]);
+
   const loadMoreMessages = useCallback(async () => {
     if (!selectedChat || !isMounted.current) return;
 
@@ -411,15 +545,19 @@ export function ChatProvider({ children }) {
     console.log("loadMoreMessages called. Pagination:", pagination);
 
     if (!pagination?.hasMore) {
-      console.log("❌ No more pages to load");
+      console.log("❌ No more messages to load (hasMore=false)");
       return;
     }
 
-    const nextPage = pagination.currentPage + 1;
-    console.log("➡️ Loading page:", nextPage);
-    await loadMessages(selectedChat.id, selectedChat.isGroup, nextPage);
-  }, [selectedChat, messagePagination, loadMessages]);
+    const cursor = pagination.cursor;
+    if (!cursor) {
+      console.log("❌ No cursor available for this chat");
+      return;
+    }
 
+    console.log("➡️ Loading older messages before cursor:", cursor);
+    await loadMessages(selectedChat.id, selectedChat.isGroup, cursor);
+  }, [selectedChat, messagePagination, loadMessages]);
 
   const leaveGroup = useCallback(
     async (groupId) => {
@@ -502,7 +640,7 @@ export function ChatProvider({ children }) {
     createPersonalChat,
     createGroupChat,
     loadMoreMessages,
-    
+
     leaveGroup,
     // ✅ REMOVED: loadChatDetails - no longer needed
 

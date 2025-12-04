@@ -7,7 +7,6 @@ const ChatCard = ({
   chat,
   isActive = false,
   onClick,
-  currentUserId,
   isMobile = false,
   className = "",
 }) => {

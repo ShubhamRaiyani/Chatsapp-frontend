@@ -10,6 +10,7 @@ import ChatAPI from "../services/ChatAPI";
 
 const ChatArea = ({ chat, currentUserId, onBack, className = "" }) => {
   const {
+    selectedChat,
     messages,
     sendMessage,
     deleteMessage,
@@ -29,6 +30,9 @@ const ChatArea = ({ chat, currentUserId, onBack, className = "" }) => {
   const [summaryLoading, setSummaryLoading] = useState(false);
   const [summaryError, setSummaryError] = useState(null);
   const [showChatInfo, setShowChatInfo] = useState(false);
+
+
+  
 
   useEffect(() => {
     setIsConnected(connected);
@@ -100,13 +104,13 @@ const ChatArea = ({ chat, currentUserId, onBack, className = "" }) => {
     // Implement mute functionality
   };
 
-  const handleDeleteChat = (chatId) => {
-    console.log("Deleting chat:", chatId);
-    // Implement delete functionality
-    if (confirm("Are you sure you want to delete this chat?")) {
-      // Call your delete API
-    }
-  };
+  // const handleDeleteChat = (chatId) => {
+  //   console.log("Deleting chat:", chatId);
+  //   // Implement delete functionality
+  //   if (confirm("Are you sure you want to delete this chat?")) {
+  //     // Call your delete API
+  //   }
+  // };
 
   const handleLeaveGroup = async (groupId) => {
     try {
@@ -131,6 +135,17 @@ const ChatArea = ({ chat, currentUserId, onBack, className = "" }) => {
       />
     );
   }
+
+  if (!selectedChat) {
+  return (
+    <EmptyState
+      title="No chat selected"
+      description="Select a conversation to start messaging"
+      className={className}
+    />
+  );
+}
+  
 
   return (
     <div className={`flex flex-col h-full w w-full relative ${className}`}>
@@ -181,7 +196,7 @@ const ChatArea = ({ chat, currentUserId, onBack, className = "" }) => {
           onLoadMore={loadMoreMessages}
           hasMore={hasMoreMessages}
           loading={loading}
-          UsernameofChat={chat?.displayName}
+          UsernameofChat={selectedChat?.displayName}
           className="h-full"
         />
       </div>
@@ -199,16 +214,16 @@ const ChatArea = ({ chat, currentUserId, onBack, className = "" }) => {
 
       {/* Chat Info Panel - Mobile overlay */}
       {showChatInfo && (
-        <div className="absolute inset-0 z-50 bg-gray-900">
+        // <div className="absolute inset-0 z-50 bg-gray-900">
           <ChatInfoPanel
             chat={chat}
+            isOpen={showChatInfo}
             currentUserId={currentUserId}
             onClose={handleCloseChatInfo}
-            onMute={handleMuteChat}
-            onDelete={handleDeleteChat}
-            onLeave={handleLeaveGroup}
+            onMuteChat={handleMuteChat}
+            onLeaveGroup={handleLeaveGroup}
           />
-        </div>
+        // </div>
       )}
     </div>
   );

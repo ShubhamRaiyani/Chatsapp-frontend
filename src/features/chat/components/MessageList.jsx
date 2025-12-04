@@ -20,7 +20,11 @@ const MessageList = ({
 }) => {
   const messagesEndRef = useRef(null);
   const containerRef = useRef(null);
-  const [isAtBottom, setIsAtBottom] = useState(true);
+  // const [isAtBottom, setIsAtBottom] = useState(true);
+  const [isAtBottom, setIsAtBottom] = useState(false);
+  const [hasInitialScroll, setHasInitialScroll] = useState(false);
+  const lastScrollTop = useRef(0);
+
   const [showScrollButton, setShowScrollButton] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
 
@@ -40,29 +44,73 @@ const MessageList = ({
     });
   };
 
+//   const handleScroll = React.useCallback(() => {
+//   if (!containerRef.current) return;
+
+//   const { scrollTop, scrollHeight, clientHeight } = containerRef.current;
+
+//   // Detect scroll direction
+//   const isScrollingUp = scrollTop < lastScrollTop.current;
+//   lastScrollTop.current = scrollTop;
+
+//   const atBottom = scrollHeight - scrollTop <= clientHeight + 100;
+//   setIsAtBottom(atBottom);
+//   setShowScrollButton(!atBottom && messages.length > 10);
+
+//   // ✅ Only load more when user scrolls UP near the top
+//   if (
+//     isScrollingUp &&
+//     scrollTop <= 50 &&
+//     hasMore &&
+//     !loading &&
+//     onLoadMore
+//   ) {
+//     console.log("🔼 User scrolled up near top, calling onLoadMore()");
+//     onLoadMore();
+//   }
+// }, [hasMore, loading, messages.length, onLoadMore]);
+
   const handleScroll = React.useCallback(() => {
     if (!containerRef.current) return;
 
     const { scrollTop, scrollHeight, clientHeight } = containerRef.current;
-    console.log("scrollTop:", scrollTop);
+
+    // Detect scroll direction
+    const isScrollingUp = scrollTop < lastScrollTop.current;
+    lastScrollTop.current = scrollTop;
 
     const atBottom = scrollHeight - scrollTop <= clientHeight + 100;
     setIsAtBottom(atBottom);
     setShowScrollButton(!atBottom && messages.length > 10);
 
-    if (scrollTop <= 50 && hasMore && !loading && onLoadMore) {
-      console.log("🔼 Reached top, calling onLoadMore()");
+    // ✅ Only load more when user scrolls UP near the top
+    if (isScrollingUp && scrollTop <= 50 && hasMore && !loading && onLoadMore) {
+      console.log("🔼 User scrolled up near top, calling onLoadMore()");
       onLoadMore();
     }
   }, [hasMore, loading, messages.length, onLoadMore]);
 
-
-
+  
+  // Scroll to bottom once when messages first load
   useEffect(() => {
-    if (isAtBottom) {
+    if (!hasInitialScroll && messages.length > 0) {
+      scrollToBottom(false);
+      setHasInitialScroll(true);
+    }
+  }, [messages.length, hasInitialScroll]);
+
+  // useEffect(() => {
+  //   if (isAtBottom) {
+  //     scrollToBottom(false);
+  //   }
+  // }, [messages, isAtBottom]);
+
+  // After initial, only auto-scroll when user is already at bottom
+  useEffect(() => {
+    if (hasInitialScroll && isAtBottom) {
       scrollToBottom(false);
     }
-  }, [messages, isAtBottom]);
+  }, [messages, isAtBottom, hasInitialScroll]);
 
   useEffect(() => {
     const container = containerRef.current;
@@ -115,7 +163,7 @@ const MessageList = ({
 
               return (
                 <MessageBubble
-                  key={message.id}
+                  key={message.messageId || message.id}
                   message={message}
                   isOwn={isOwn}
                   showAvatar={showAvatar && !isOwn}

@@ -112,6 +112,35 @@ const ChatAPI = {
     }
   },
 
+  async getMessagesCursorForChat(chatId, beforeMessageId = null, limit = 20) {
+  const params = new URLSearchParams();
+  if (beforeMessageId) params.append("beforeMessageId", beforeMessageId);
+  params.append("size", limit);
+
+  const response = await fetch(
+    `${API_BASE}/messages/chat/${chatId}/cursor?${params.toString()}`,
+    { method: "GET", credentials: "include", headers: { "Content-Type": "application/json" } }
+  );
+
+  if (!response.ok) throw new Error(`Failed to fetch chat messages: ${response.status}`);
+  return await response.json(); // { messages, hasMore, nextCursor }
+  },
+
+async getMessagesCursorForGroup(groupId, beforeMessageId = null, limit = 20) {
+  const params = new URLSearchParams();
+  if (beforeMessageId) params.append("beforeMessageId", beforeMessageId);
+  params.append("size", limit);
+
+  const response = await fetch(
+    `${API_BASE}/messages/group/${groupId}/cursor?${params.toString()}`,
+    { method: "GET", credentials: "include", headers: { "Content-Type": "application/json" } }
+  );
+
+  if (!response.ok) throw new Error(`Failed to fetch group messages: ${response.status}`);
+  return await response.json();
+},
+
+
   // ✅ NEW: Generate Chat Summary
   async generateChatSummary(chatId) {
     try {
