@@ -4,7 +4,7 @@ import ChatCard from "./ChatCard";
 import NewChatModal from "./NewChatModal";
 import Avatar from "./ui/Avatar";
 import ProfileSettingsModal from "./ProfileSettingsModal";
-import { Search, Plus } from "lucide-react";
+import { Search, Plus, MessageSquare, Users, MessageCircle } from "lucide-react";
 
 const Sidebar = ({
   chats = [],
@@ -15,6 +15,7 @@ const Sidebar = ({
   user,
   onLogout,
   activeSection = "chats",
+  onSectionChange,
   className = "",
 }) => {
   const [searchQuery, setSearchQuery] = useState("");
@@ -188,6 +189,45 @@ const Sidebar = ({
 
                       {/* Menu Items */}
                       <div className="py-2">
+                        <button
+                          onClick={() => {
+                            onSectionChange?.("chats");
+                            setShowProfileMenu(false);
+                          }}
+                          className={`w-full px-4 py-2 text-left text-sm hover:bg-[#404040] transition-colors flex items-center space-x-3 ${
+                            activeSection === "chats" ? "text-blue-400" : "text-white"
+                          }`}
+                        >
+                          <MessageSquare className="w-4 h-4" />
+                          <span>All Chats</span>
+                        </button>
+                        <button
+                          onClick={() => {
+                            onSectionChange?.("direct");
+                            setShowProfileMenu(false);
+                          }}
+                          className={`w-full px-4 py-2 text-left text-sm hover:bg-[#404040] transition-colors flex items-center space-x-3 ${
+                            activeSection === "direct" ? "text-blue-400" : "text-white"
+                          }`}
+                        >
+                          <MessageCircle className="w-4 h-4" />
+                          <span>Direct Messages</span>
+                        </button>
+                        <button
+                          onClick={() => {
+                            onSectionChange?.("groups");
+                            setShowProfileMenu(false);
+                          }}
+                          className={`w-full px-4 py-2 text-left text-sm hover:bg-[#404040] transition-colors flex items-center space-x-3 ${
+                            activeSection === "groups" ? "text-blue-400" : "text-white"
+                          }`}
+                        >
+                          <Users className="w-4 h-4" />
+                          <span>Group Chats</span>
+                        </button>
+
+                        <div className="border-t border-[#404040] my-2"></div>
+
                         <button
                           onClick={() => {
                             setShowProfileModal(true);

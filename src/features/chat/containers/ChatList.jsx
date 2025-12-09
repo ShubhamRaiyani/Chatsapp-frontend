@@ -12,6 +12,7 @@ const ChatList = ({
   onLogout,
   user,
   loadChats,
+  onSectionChange,
   className = "",
 }) => {
   // ✅ Use filtered chats based on active section
@@ -147,6 +148,7 @@ const ChatList = ({
         user={user}
         onLogout={onLogout}
         activeSection={activeSection}
+        onSectionChange={onSectionChange}
         className="flex-1"
       />
     </div>

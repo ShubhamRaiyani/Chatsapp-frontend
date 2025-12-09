@@ -166,7 +166,7 @@ const Dashboard = ({ className = "" }) => {
     // Mobile view
     activeChat ? (
       // Chat open: show ChatArea with Back button
-      <div className="h-screen h-[100vh] h-[100svh] w-full flex flex-col bg-gray-900 overflow-hidden">
+      <div className="h-[100dvh] w-full flex flex-col bg-gray-900 overflow-hidden fixed inset-0">
         <ChatArea
           chat={activeChat}
           currentUserId={user?.email}
@@ -175,7 +175,7 @@ const Dashboard = ({ className = "" }) => {
       </div>
     ) : (
       // No chat selected: show only the chat list
-      <div className="h-screen h-[100vh] h-[100svh] w-full bg-gray-900 overflow-hidden">
+      <div className="h-[100dvh] w-full bg-gray-900 overflow-hidden fixed inset-0">
       <ChatList
         chats={chats}
         currentUserId={user?.email}
@@ -185,6 +185,7 @@ const Dashboard = ({ className = "" }) => {
         user={user}
         onLogout={handleLogout}
         activeSection={activeSection}
+        onSectionChange={handleSectionChange}
       />
     </div>
     )

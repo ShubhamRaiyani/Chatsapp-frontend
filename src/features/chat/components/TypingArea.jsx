@@ -84,11 +84,13 @@ const TypingArea = ({
 
   return (
     <div
-      className={`
+      className={`typing-area-container sticky bottom-0 z-30
         border-t border-gray-700 bg-gray-800
         px-3 py-2 md:px-4 md:py-3
+        pb-[calc(0.5rem+env(safe-area-inset-bottom))]
         ${className}
       `}
+      style={{ WebkitOverflowScrolling: "touch" }}
     >
       <div className="max-w-6xl mx-auto">
         <form

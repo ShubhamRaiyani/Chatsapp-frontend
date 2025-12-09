@@ -77,7 +77,10 @@ body,
 #root {
   height: 100%;
   width: 100%;
-  overflow: hidden;
+  /* Allow the viewport to scroll on mobile so the virtual keyboard
+     can resize the viewport and inputs remain visible. */
+  overflow: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 /* Custom scrollbar for webkit browsers (optional) */
