@@ -39,7 +39,7 @@ export function AuthProvider({ children }) {
   // Login with email/password
   const login = useCallback(
     async (email, password) => {
-      setLoading(true);
+      // setLoading(true); // Handled locally in component to avoid full page loader
       setError(null);
       try {
         const resp = await AuthService.login(email, password);
@@ -47,9 +47,9 @@ export function AuthProvider({ children }) {
         return { success: true , message: resp.message};
       } catch (err) {
         setError(err.message);
-        return { success: false, error: err.message };
+        return { success: false, message: err.message };
       } finally {
-        setLoading(false);
+        // setLoading(false);
       }
     },
     [fetchUserProfile]
@@ -57,19 +57,21 @@ export function AuthProvider({ children }) {
 
   // Register new user
   const register = useCallback(async (username, email, password) => {
-    setLoading(true);
+    // setLoading(true); // Handled locally
     setError(null);
     try {
       const res = await AuthService.register(username, email, password);
+      // res is likely the response body object, e.g., { message: "...", email: "..." }
+      const successMessage = res?.message || "Registration successful. Please check your email for the verification link.";
       return {
         success: true,
-        message: res || "Registration successful. Please verify your email.",
+        message: successMessage,
       };
     } catch (err) {
       setError(err.message);
-      return { success: false, error: err.message };
+      return { success: false, message: err.message };
     } finally {
-      setLoading(false);
+      // setLoading(false);
     }
   }, []);
 
@@ -93,7 +95,7 @@ export function AuthProvider({ children }) {
       return res;
     } catch (err) {
       setError(err.message);
-      return { success: false, error: err.message };
+      return { success: false, message: err.message };
     } finally {
       setLoading(false);
     }

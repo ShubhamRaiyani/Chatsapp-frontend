@@ -1,9 +1,9 @@
-import React, { useEffect, useRef, useState, useLayoutEffect } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import MessageBubble from "./ui/MessageBubble";
 import TypingIndicator from "./ui/TypingIndicator";
-import ReadReceipt from "./ui/ReadReceipt";
 import { groupMessagesByDate, shouldShowAvatar } from "../utils/messageUtils";
 import { ChevronDown } from "lucide-react";
+import { useChatScroll } from "../hooks/useChatScroll";
 
 const MessageList = ({
   messages = [],
@@ -18,20 +18,21 @@ const MessageList = ({
   className = "",
   UsernameofChat,
 }) => {
-  const messagesEndRef = useRef(null);
-  const containerRef = useRef(null);
-
-  const [hasInitialScroll, setHasInitialScroll] = useState(false);
-  const [readyToShow, setReadyToShow] = useState(false);
-  const [showScrollButton, setShowScrollButton] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
 
-  const lastScrollTop = useRef(0);
-
-  // For anchoring when loading older messages
-  const scrollAdjustRef = useRef({
-    pending: false,
-    prevScrollBottomOffset: 0,
+  // Use custom hook for scroll management
+  const {
+    containerRef,
+    messagesEndRef,
+    showScrollButton,
+    readyToShow,
+    scrollToBottom,
+    handleScroll
+  } = useChatScroll({
+    messages,
+    hasMore,
+    loading,
+    onLoadMore
   });
 
   // Mobile detection
@@ -44,99 +45,19 @@ const MessageList = ({
     return () => window.removeEventListener("resize", checkMobile);
   }, []);
 
-  const scrollToBottom = () => {
-    if (!containerRef.current) return;
-    const container = containerRef.current;
-    container.scrollTop = container.scrollHeight;
-  };
-
-  const handleScroll = React.useCallback(() => {
-    if (!containerRef.current) return;
-
-    const { scrollTop, scrollHeight, clientHeight } = containerRef.current;
-
-    // Detect scroll direction
-    const isScrollingUp = scrollTop < lastScrollTop.current;
-    lastScrollTop.current = scrollTop;
-
-    const atBottom = scrollHeight - scrollTop <= clientHeight + 2;
-    setShowScrollButton(!atBottom && messages.length > 10);
-
-    // Load more only when user scrolls UP near the top
-    if (isScrollingUp && scrollTop <= 50 && hasMore && !loading && onLoadMore) {
-      console.log("🔼 User scrolled up near top, calling onLoadMore()");
-
-      // Save *distance from bottom* BEFORE loading older messages
-      const prevScrollBottomOffset = scrollHeight - scrollTop;
-
-      scrollAdjustRef.current = {
-        pending: true,
-        prevScrollBottomOffset,
-      };
-
-      onLoadMore();
-    }
-  }, [hasMore, loading, messages.length, onLoadMore]);
-  const handleManualLoadMore = () => {
-    if (!hasMore || loading || !onLoadMore || !containerRef.current) return;
-
-    const container = containerRef.current;
-    const { scrollTop, scrollHeight } = container;
-
-    // Save distance from bottom BEFORE loading older messages
-    const prevScrollBottomOffset = scrollHeight - scrollTop;
-
-    scrollAdjustRef.current = {
-      pending: true,
-      prevScrollBottomOffset,
-    };
-
-    console.log("⬆️ Manual load older messages");
-    onLoadMore();
-  };
-
-
-  // 1) INITIAL SCROLL – do it BEFORE paint and hide content until done
-  useLayoutEffect(() => {
-    if (!hasInitialScroll && messages.length > 0 && containerRef.current) {
-      // Scroll to bottom BEFORE user sees anything
-      scrollToBottom();
-      setHasInitialScroll(true);
-      setReadyToShow(true);
-    }
-  }, [messages.length, hasInitialScroll]);
-
-  // 2) AFTER MESSAGES CHANGE – handle anchor when older messages are prepended
-  useEffect(() => {
-    const container = containerRef.current;
-    if (!container) return;
-
-    if (scrollAdjustRef.current.pending) {
-      const { prevScrollBottomOffset } = scrollAdjustRef.current;
-      const newScrollHeight = container.scrollHeight;
-
-      // Keep the same distance from bottom → stay at the join of batches
-      const newScrollTop = newScrollHeight - prevScrollBottomOffset;
-      container.scrollTop = newScrollTop;
-
-      scrollAdjustRef.current.pending = false;
-      return;
-    }
-
-    // ❌ No auto-scroll-to-bottom here on normal updates
-    // User controls position unless it's the very first load
-  }, [messages]);
-
-  // Attach scroll listener
+  // Attach scroll listener via hook
   useEffect(() => {
     const container = containerRef.current;
     if (container) {
       container.addEventListener("scroll", handleScroll);
       return () => container.removeEventListener("scroll", handleScroll);
     }
-  }, [handleScroll]);
+  }, [handleScroll, containerRef]);
 
-  const groupedMessages = groupMessagesByDate(messages);
+  // Memoize grouped messages to avoid expensive recalculation on every render
+  const groupedMessages = useMemo(() => {
+    return groupMessagesByDate(messages);
+  }, [messages]);
 
   const renderDateSeparator = (date) => (
     <div key={`date-${date}`} className="flex justify-center my-4">
@@ -162,7 +83,7 @@ const MessageList = ({
           flex-1 overflow-y-auto custom-scrollbar
           ${isMobile ? "px-2 py-2" : "px-4 py-4"}
         `}
-        // Hide content until initial scroll-to-bottom is done
+        // Hide content until initial scroll-to-bottom is done (managed by hook)
         style={{
           visibility:
             readyToShow || messages.length === 0 ? "visible" : "hidden",
@@ -172,7 +93,7 @@ const MessageList = ({
         {hasMore && (
           <div className="flex justify-center my-2">
             <button
-              onClick={handleManualLoadMore}
+              onClick={() => onLoadMore && onLoadMore()}
               disabled={loading}
               className="text-xs px-3 py-1 rounded-full bg-gray-700 text-gray-200 disabled:opacity-60"
             >
@@ -180,6 +101,7 @@ const MessageList = ({
             </button>
           </div>  
         )}
+        
         {groupedMessages.map(({ date, messages: dayMessages }) => (
           <div key={date}>
             {renderDateSeparator(date)}
@@ -223,10 +145,9 @@ const MessageList = ({
       {/* Scroll to bottom button - mobile optimized */}
       {showScrollButton && (
         <button
-          onClick={() => {
-            scrollToBottom();
-          }}
-          className="absolute rounded-full transition-transform hover:scale-110"
+          onClick={scrollToBottom}
+          className="absolute right-4 bottom-20 bg-gray-800 p-2 rounded-full shadow-lg border border-gray-700 text-white hover:bg-gray-700 transition-all z-10"
+          aria-label="Scroll to bottom"
         >
           <ChevronDown size={isMobile ? 20 : 24} />
         </button>

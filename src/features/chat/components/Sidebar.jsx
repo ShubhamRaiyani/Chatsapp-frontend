@@ -2,6 +2,8 @@
 import React, { useState, useEffect } from "react";
 import ChatCard from "./ChatCard";
 import NewChatModal from "./NewChatModal";
+import Avatar from "./ui/Avatar";
+import ProfileSettingsModal from "./ProfileSettingsModal";
 import { Search, Plus } from "lucide-react";
 
 const Sidebar = ({
@@ -11,6 +13,7 @@ const Sidebar = ({
   onChatSelect,
   onNewChat,
   user,
+  onLogout,
   activeSection = "chats",
   className = "",
 }) => {
@@ -18,6 +21,8 @@ const Sidebar = ({
   const [showNewChatModal, setShowNewChatModal] = useState(false);
   const [isCreatingChat, setIsCreatingChat] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+  const [showProfileMenu, setShowProfileMenu] = useState(false);
+  const [showProfileModal, setShowProfileModal] = useState(false);
 
   // Mobile detection
   useEffect(() => {
@@ -135,13 +140,116 @@ const Sidebar = ({
       >
         {/* Title and count */}
         <div className="flex items-center justify-between mb-3">
-          <h1
-            className={`font-semibold text-white ${
-              isMobile ? "text-lg" : "text-xl"
-            }`}
-          >
-            {getSectionTitle()}
-          </h1>
+          <div className="flex items-center gap-3">
+            {/* Mobile Profile Button - Top Left */}
+            {isMobile && user && (
+              <div className="relative">
+                <button
+                  onClick={() => setShowProfileMenu(!showProfileMenu)}
+                  className="flex items-center justify-center"
+                >
+                  <Avatar
+                    src={user?.avatar}
+                    alt={user?.name || "User"}
+                    size="sm"
+                    status="online"
+                  />
+                </button>
+
+                {/* Profile dropdown menu */}
+                {showProfileMenu && (
+                  <>
+                    {/* Backdrop */}
+                    <div
+                      className="fixed inset-0 z-40"
+                      onClick={() => setShowProfileMenu(false)}
+                    />
+                    {/* Menu */}
+                    <div className="absolute top-full left-0 mt-2 w-56 bg-[#262626] rounded-xl shadow-2xl py-2 z-50 border border-[#404040]">
+                      {/* User Info */}
+                      <div className="px-4 py-3 border-b border-[#404040]">
+                        <div className="flex items-center space-x-3">
+                          <Avatar
+                            src={user?.avatar}
+                            alt={user?.name || "User"}
+                            size="md"
+                            status="online"
+                          />
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-semibold text-white truncate">
+                              {user?.name || user?.username || "User"}
+                            </p>
+                            <p className="text-xs text-gray-400 truncate">
+                              {user?.email}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Menu Items */}
+                      <div className="py-2">
+                        <button
+                          onClick={() => {
+                            setShowProfileModal(true);
+                            setShowProfileMenu(false);
+                          }}
+                          className="w-full px-4 py-2 text-left text-sm text-white hover:bg-[#404040] transition-colors flex items-center space-x-3"
+                        >
+                          <svg
+                            className="w-4 h-4"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+                            />
+                          </svg>
+                          <span>Profile & Settings</span>
+                        </button>
+                      </div>
+
+                      {/* Logout */}
+                      <div className="border-t border-[#404040] pt-2">
+                        <button
+                          onClick={() => {
+                            onLogout?.();
+                            setShowProfileMenu(false);
+                          }}
+                          className="w-full px-4 py-2 text-left text-sm text-red-400 hover:bg-[#404040] transition-colors flex items-center space-x-3"
+                        >
+                          <svg
+                            className="w-4 h-4"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
+                            />
+                          </svg>
+                          <span>Sign Out</span>
+                        </button>
+                      </div>
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
+            <h1
+              className={`font-semibold text-white ${
+                isMobile ? "text-lg" : "text-xl"
+              }`}
+            >
+              {getSectionTitle()}
+            </h1>
+          </div>
           <div className="flex items-center gap-2">
             <span
               className={`text-gray-400 ${isMobile ? "text-xs" : "text-sm"}`}
@@ -192,7 +300,7 @@ const Sidebar = ({
                 onClick={() => onChatSelect(chat)}
                 currentUserId={currentUserId}
                 isMobile={isMobile}
-              />
+              />  
             ))}
           </div>
         ) : (
@@ -246,6 +354,14 @@ const Sidebar = ({
         isCreating={isCreatingChat}
         isMobile={isMobile}
       />
+
+      {/* Profile Settings Modal for mobile */}
+      {showProfileModal && (
+        <ProfileSettingsModal
+          user={user}
+          onClose={() => setShowProfileModal(false)}
+        />
+      )}
     </div>
   );
 };

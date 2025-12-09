@@ -105,7 +105,6 @@ const ChatTopBar = ({
           </h2>
           <div className="flex items-center gap-2">
             <p className="text-xs md:text-sm text-gray-400 truncate">
-              {getChatSubtitle()}
             </p>
             {chat?.isTyping && (
               <span className="text-xs text-blue-400 animate-pulse">
@@ -164,30 +163,6 @@ const ChatTopBar = ({
           {/* Mobile-friendly dropdown */}
           {showDropdown && (
             <div className="absolute right-0 mt-2 w-48 bg-gray-700 rounded-lg shadow-lg border border-gray-600 z-50">
-              {isMobile && (
-                <>
-                  <button
-                    onClick={() => {
-                      onStartCall?.(chat);
-                      setShowDropdown(false);
-                    }}
-                    className="flex items-center gap-3 w-full px-4 py-2 text-left text-gray-200 hover:bg-gray-600 transition-colors rounded-t-lg"
-                  >
-                    <Phone size={16} />
-                    <span>Voice Call</span>
-                  </button>
-                  <button
-                    onClick={() => {
-                      onStartVideoCall?.(chat);
-                      setShowDropdown(false);
-                    }}
-                    className="flex items-center gap-3 w-full px-4 py-2 text-left text-gray-200 hover:bg-gray-600 transition-colors"
-                  >
-                    <Video size={16} />
-                    <span>Video Call</span>
-                  </button>
-                </>
-              )}
               <button
                 onClick={() => {
                   onShowInfo?.(chat);

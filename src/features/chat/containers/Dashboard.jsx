@@ -183,6 +183,7 @@ const Dashboard = ({ className = "" }) => {
         onChatSelect={handleChatSelect}
         onNewChat={handleNewChat}
         user={user}
+        onLogout={handleLogout}
         activeSection={activeSection}
       />
     </div>

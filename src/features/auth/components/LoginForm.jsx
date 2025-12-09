@@ -1,4 +1,5 @@
 import React from "react";
+import { Link } from "react-router-dom";
 
 export default function LoginForm({ formData, handleChange }) {
   return (
@@ -16,7 +17,12 @@ export default function LoginForm({ formData, handleChange }) {
         />
       </label>
       <label className="flex flex-col">
-        Password
+        <div className="flex justify-between items-center mb-1">
+          <span>Password</span>
+          <Link to="/forgot-password" className="text-xs text-[#ae7aff] hover:underline">
+            Forgot Password?
+          </Link>
+        </div>
         <input
           type="password"
           name="password"

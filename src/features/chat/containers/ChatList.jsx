@@ -44,7 +44,8 @@ const ChatList = ({
   // Handle chat selection
   const handleChatSelect = (chat) => {
     onChatSelect?.(chat);
-    loadChats(); // Refresh chat list to update last message preview
+    refreshChats();
+    // loadChats(); // Refresh chat list to update last message preview
   };
 
   // Handle logout
@@ -144,6 +145,7 @@ const ChatList = ({
         onChatSelect={handleChatSelect}
         onNewChat={handleNewChat} // ✅ Pass the fixed handler
         user={user}
+        onLogout={onLogout}
         activeSection={activeSection}
         className="flex-1"
       />

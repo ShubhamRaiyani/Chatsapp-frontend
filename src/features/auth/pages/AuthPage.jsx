@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import toast from "react-hot-toast";
 import LoginForm from "../components/LoginForm";
 import RegisterForm from "../components/RegisterForm";
 import OAuthButtons from "../components/OAuthButtons";
@@ -20,34 +21,13 @@ export default function AuthPage() {
   });
   const [errors, setErrors] = useState({});
 
-  const [loginMessage, setLoginMessage] = useState("");
-  const [registerMessage, setRegisterMessage] = useState("");
-  const [blinkLogin, setBlinkLogin] = useState(false);
-  const [blinkRegister, setBlinkRegister] = useState(false);
-
-  // Blink effect for loginMessage
-  useEffect(() => {
-    if (loginMessage) {
-      setBlinkLogin(true);
-      const t = setTimeout(() => setBlinkLogin(false), 1000);
-      return () => clearTimeout(t);
-    }
-  }, [loginMessage]);
-
-  // Blink effect for registerMessage
-  useEffect(() => {
-    if (registerMessage) {
-      setBlinkRegister(true);
-      const t = setTimeout(() => setBlinkRegister(false), 1000);
-      return () => clearTimeout(t);
-    }
-  }, [registerMessage]);
+  // Blink effects removed, using toast instead
+  
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const switchMode = (mode) => {
     setAuthMode(mode);
     setErrors({});
-    setLoginMessage("");
-    setRegisterMessage("");
   };
 
   const handleChange = (e) => {
@@ -72,27 +52,39 @@ export default function AuthPage() {
   };
 
   const handleLogin = async () => {
-    const result = await login(formData.email, formData.password);
-    if (result.success) {
-      const token = result.token || getCookieValue("jwt");
-      if (token) localStorage.setItem("authToken", token);
-      navigate("/dashboard");
-    } else {
-      setLoginMessage(result.message);
+    setIsSubmitting(true);
+    try {
+      const result = await login(formData.email, formData.password);
+      if (result.success) {
+        const token = result.token || getCookieValue("jwt");
+        if (token) localStorage.setItem("authToken", token);
+        toast.success("Login successful!");
+        navigate("/dashboard");
+      } else {
+        toast.error(result.message || "Login failed");
+      }
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   const handleRegister = async () => { 
-    const result = await register(
-      formData.username,
-      formData.email,
-      formData.password 
-    );
-    if (result.success) {
-      setRegisterMessage(result.message);
-      setFormData({ username: "", email: "", password: "" }); 
-    } else {
-      setRegisterMessage(result.message);
+    setIsSubmitting(true);
+    try {
+      const result = await register(
+        formData.username,
+        formData.email,
+        formData.password 
+      );
+      if (result.success) {
+        toast.success(result.message || "Registration successful!");
+        setFormData({ username: "", email: "", password: "" }); 
+        setAuthMode("login");
+      } else {
+        toast.error(result.message || "Registration failed");
+      }
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -131,20 +123,12 @@ export default function AuthPage() {
               />
               <button
                 type="submit"
-                className="w-full bg-[#ae7aff] text-black font-semibold py-3 rounded-lg hover:bg-[#915adb] transition"
+                disabled={isSubmitting}
+                className={`w-full bg-[#ae7aff] text-black font-semibold py-3 rounded-lg transition 
+                  ${isSubmitting ? "opacity-70 cursor-not-allowed" : "hover:bg-[#915adb]"}`}
               >
-                Login
+                {isSubmitting ? "Logging in..." : "Login"}
               </button>
-              {loginMessage && (
-                <p
-                  className={
-                    `mx-auto text-center text-[#ae7aff] font-semibold py-2 px-4 mt-4 rounded ` +
-                    (blinkLogin ? "blink-animation" : "")
-                  }
-                >
-                  {loginMessage}
-                </p>
-              )}
             </>
           ) : (
             <>
@@ -155,20 +139,12 @@ export default function AuthPage() {
               />
               <button
                 type="submit"
-                className="w-full bg-[#ae7aff] text-black font-semibold py-3 rounded-lg hover:bg-[#915adb] transition"
+                disabled={isSubmitting}
+                className={`w-full bg-[#ae7aff] text-black font-semibold py-3 rounded-lg transition 
+                  ${isSubmitting ? "opacity-70 cursor-not-allowed" : "hover:bg-[#915adb]"}`}
               >
-                Create Account
+                {isSubmitting ? "Creating Account..." : "Create Account"}
               </button>
-              {registerMessage && (
-                <p
-                  className={
-                    `mx-auto text-center text-[#ae7aff] font-semibold py-2 px-4 mt-4 rounded ` +
-                    (blinkRegister ? "blink-animation" : "")
-                  }
-                >
-                  {registerMessage}
-                </p>
-              )}
             </>
           )}
         </form>

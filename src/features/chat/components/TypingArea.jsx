@@ -48,6 +48,7 @@ const TypingArea = ({
   };
 
   const handleSubmit = (e) => {
+    console.log("handleSubmit called");
     e.preventDefault();
     const trimmedMessage = message.trim();
     if (!trimmedMessage || disabled) return;

@@ -1,11 +1,11 @@
 import React from "react";
-import Avatar from "./Avatar";
+// import Avatar from "./Avatar"; // Avatar no longer needed
 import { formatMessageTime } from "../../utils/dateUtils";
 
 const MessageBubble = ({
   message,
   isOwn,
-  showAvatar = true,
+  showAvatar = true, // Kept prop for compatibility but ignored
   isGrouped = false,
   currentUserId,
   UsernameofChat,
@@ -87,17 +87,10 @@ const MessageBubble = ({
         isGrouped ? "mt-1" : "mt-4"
       }`}
     >
-      {/* Avatar for received messages */}
-      {showAvatar && !isOwn && !isGrouped && (
-        <div className="flex-shrink-0 w-8 h-8">
-          <Avatar user={message.sender} size="sm" className="w-8 h-8" />
-        </div>
-      )}
-
-      {/* Spacer when no avatar but need alignment */}
-      {!showAvatar && !isOwn && !isGrouped && (
-        <div className="w-8 flex-shrink-0" />
-      )}
+      {/* 
+        Avatar removed as per user request to clean up UI.
+        Original logic: {showAvatar && !isOwn && ... <Avatar />} 
+      */}
 
       {/* Message content container */}
       <div
@@ -105,12 +98,10 @@ const MessageBubble = ({
           isOwn ? "items-end" : "items-start"
         }`}
       >
-        {/* Sender name for received messages in groups */}
-        {!isOwn && !isGrouped && (
-          <div className="text-gray-400 text-xs mb-1 px-1">
-            {message.sender?.username || UsernameofChat || "Unknown"}
-          </div>
-        )}
+        {/* 
+           Sender name removed as per user request.
+           Original logic: {!isOwn && !isGrouped && <div className="text-gray-400...">...</div>}
+        */}
 
         {/* Message bubble */}
         <div
