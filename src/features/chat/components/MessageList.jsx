@@ -131,15 +131,15 @@ const MessageList = ({
           </div>
         ))}
 
-        {/* Typing indicators */}
-        {typingUsers.length > 0 && (
-          <div className={`${isMobile ? "px-2 py-1" : "px-4 py-2"}`}>
-            <TypingIndicator users={typingUsers} />
-          </div>
-        )}
-
         <div ref={messagesEndRef} />
       </div>
+
+      {/* Typing indicator — outside scroll so it's always visible above the input */}
+      {typingUsers.length > 0 && (
+        <div className="flex-shrink-0 px-4 py-1 border-t border-white/[0.04]">
+          <TypingIndicator users={typingUsers} />
+        </div>
+      )}
 
       {/* Scroll to bottom button - mobile optimized */}
       {showScrollButton && (

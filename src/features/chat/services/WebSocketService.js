@@ -1,8 +1,8 @@
 // features/chat/services/WebSocketService.js
 import SockJS from "sockjs-client";
 import { Client } from "@stomp/stompjs";
-const WS_BASE =
-  import.meta.env.VITE_WS_BASE_URL || "http://localhost:8080/ws";
+const WS_BASE = import.meta.env.VITE_WS_BASE_URL || "http://localhost:8080/ws";
+const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://localhost:8080/api";
 
 class WebSocketService {
   constructor() {
@@ -17,6 +17,10 @@ class WebSocketService {
     this.messageCallbacks = new Set();
     this.connectionCallbacks = new Set();
     this.notificationCallbacks = new Set();
+    this.typingCallbacks = new Set();
+    this.presenceCallbacks = new Set();
+    this.presenceSubscription = null;
+    this.onlineUsersMap = {}; // email → boolean, persists across chat switches
     this.reconnectAttempts = 0;
     this.maxReconnectAttempts = 3;
   }
@@ -98,6 +102,37 @@ class WebSocketService {
           }
         );
 
+        // Global presence topic — subscribe once per connection
+        this.presenceSubscription = this.stompClient.subscribe(
+          "/topic/presence",
+          (message) => {
+            try {
+              const data = JSON.parse(message.body);
+              // Keep the map up to date so any component can read it synchronously
+              if (data.userId) this.onlineUsersMap[data.userId] = data.online;
+              this.presenceCallbacks.forEach((cb) => {
+                try { cb(data); } catch (e) { console.error("Presence callback error:", e); }
+              });
+            } catch (e) {
+              console.error("Presence parse error:", e);
+            }
+          }
+        );
+
+        // Seed the map with whoever is already online (solves the "missed connect event" problem)
+        fetch(`${API_BASE}/users/online`, { credentials: "include" })
+          .then((r) => (r.ok ? r.json() : []))
+          .then((emails) => {
+            emails.forEach((email) => { this.onlineUsersMap[email] = true; });
+            // Notify any already-mounted presence subscribers
+            this.presenceCallbacks.forEach((cb) => {
+              emails.forEach((email) => {
+                try { cb({ type: "PRESENCE", userId: email, online: true }); } catch (e) {}
+              });
+            });
+          })
+          .catch((e) => console.warn("Could not fetch initial online users:", e));
+
         this.connectionCallbacks.forEach((cb) => {
           try { cb(true); } catch (e) { console.error("Callback error:", e); }
         });
@@ -123,6 +158,7 @@ class WebSocketService {
         this.connected = false;
         // All subscriptions are dead after disconnect — clear the map
         this.subscriptions.clear();
+        this.presenceSubscription = null;
         this.connectionCallbacks.forEach((cb) => {
           try { cb(false); } catch (e) { console.error("Callback error:", e); }
         });
@@ -152,6 +188,10 @@ class WebSocketService {
       try { sub.unsubscribe(); } catch (e) {}
     });
     this.subscriptions.clear();
+    if (this.presenceSubscription) {
+      try { this.presenceSubscription.unsubscribe(); } catch (e) {}
+      this.presenceSubscription = null;
+    }
     if (this.stompClient) {
       try { this.stompClient.forceDisconnect(); } catch (e) {}
     }
@@ -164,6 +204,10 @@ class WebSocketService {
       try {
         this.subscriptions.forEach((sub) => { try { sub.unsubscribe(); } catch (e) {} });
         this.subscriptions.clear();
+        if (this.presenceSubscription) {
+          try { this.presenceSubscription.unsubscribe(); } catch (e) {}
+          this.presenceSubscription = null;
+        }
         this.stompClient.deactivate();
       } catch (error) {
         console.warn("Disconnect warning:", error);
@@ -178,6 +222,7 @@ class WebSocketService {
     this.connectionPromise = null;
     this.sessionId = null;
     this.subscriptions.clear();
+    this.presenceSubscription = null;
   }
 
   // Subscribe to a single chat/group topic (idempotent — skips if already subscribed)
@@ -195,9 +240,15 @@ class WebSocketService {
       const sub = this.stompClient.subscribe(destination, (message) => {
         try {
           const data = JSON.parse(message.body);
-          this.messageCallbacks.forEach((cb) => {
-            try { cb(data); } catch (e) { console.error("Message callback error:", e); }
-          });
+          if (data.type === "TYPING") {
+            this.typingCallbacks.forEach((cb) => {
+              try { cb(data); } catch (e) { console.error("Typing callback error:", e); }
+            });
+          } else {
+            this.messageCallbacks.forEach((cb) => {
+              try { cb(data); } catch (e) { console.error("Message callback error:", e); }
+            });
+          }
         } catch (e) {
           console.error("Message parse error:", e);
         }
@@ -257,6 +308,23 @@ class WebSocketService {
     this.connectionCallbacks.add(callback);
     callback(this.connected);
     return () => this.connectionCallbacks.delete(callback);
+  }
+
+  onTyping(callback) {
+    this.typingCallbacks.add(callback);
+    return () => this.typingCallbacks.delete(callback);
+  }
+
+  onPresence(callback) {
+    this.presenceCallbacks.add(callback);
+    return () => this.presenceCallbacks.delete(callback);
+  }
+
+  /** Synchronous read — returns true/false if known, null if we have no data yet */
+  isUserOnline(email) {
+    if (!email) return null;
+    const val = this.onlineUsersMap[email];
+    return val !== undefined ? val : null;
   }
 
   isConnected() {

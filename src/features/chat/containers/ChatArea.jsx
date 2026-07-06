@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import ChatTopBar from "../components/ChatTopBar";
 import MessageList from "../components/MessageList";
 import TypingArea from "../components/TypingArea";
@@ -6,9 +6,12 @@ import EmptyState from "../components/EmptyState";
 import ChatInfoPanel from "../components/ChatInfoPanel.jsx";
 import { useChat } from "../hooks/useChat";
 import { useTyping } from "../hooks/useTyping";
+import { useAuth } from "../../auth/hooks/useAuth";
+import webSocketService from "../services/WebSocketService";
 import ChatAPI from "../services/ChatAPI";
 
 const ChatArea = ({ chat, currentUserId, onBack, className = "" }) => {
+  const { user } = useAuth();
   const {
     messages,
     sendMessage,
@@ -21,12 +24,53 @@ const ChatArea = ({ chat, currentUserId, onBack, className = "" }) => {
     leaveGroup,
   } = useChat(chat?.id);
 
-  const { typingUsers, startTyping, stopTyping } = useTyping(chat?.id);
+  const { typingUsers, startTyping, stopTyping } = useTyping(
+    chat?.id,
+    chat?.isGroup || false,
+    currentUserId
+  );
 
   const [isConnected, setIsConnected] = useState(true);
   const [summaryLoading, setSummaryLoading] = useState(false);
   const [summaryError, setSummaryError] = useState(null);
   const [showChatInfo, setShowChatInfo] = useState(false);
+
+  // The other person's email (null for groups)
+  const otherUserEmail = !chat?.isGroup
+    ? chat?.receiverEmail ||
+      chat?.participantEmails?.find((e) => e !== currentUserId)
+    : null;
+
+  // Initialise from the service's persistent map so we don't start blind after a chat switch
+  const [isOtherUserOnline, setIsOtherUserOnline] = useState(
+    () => (otherUserEmail ? (webSocketService.isUserOnline(otherUserEmail) ?? false) : false)
+  );
+
+  // Re-sync when the chat changes and subscribe to live updates
+  useEffect(() => {
+    if (!otherUserEmail) {
+      setIsOtherUserOnline(false);
+      return;
+    }
+    // Read the latest known value immediately (covers chat-switch case)
+    setIsOtherUserOnline(webSocketService.isUserOnline(otherUserEmail) ?? false);
+
+    const unsub = webSocketService.onPresence((event) => {
+      if (event.userId === otherUserEmail) {
+        setIsOtherUserOnline(event.online);
+      }
+    });
+    return unsub;
+  }, [otherUserEmail]);
+
+  // Wrap typing callbacks so TypingArea doesn't need to know the user's identity
+  const handleStartTyping = useCallback(() => {
+    startTyping(currentUserId, user?.username || user?.name || currentUserId);
+  }, [startTyping, currentUserId, user]);
+
+  const handleStopTyping = useCallback(() => {
+    stopTyping(currentUserId);
+  }, [stopTyping, currentUserId]);
 
 
   
@@ -147,6 +191,7 @@ const ChatArea = ({ chat, currentUserId, onBack, className = "" }) => {
           onBack={onBack}
           onSummarize={(chatId) => handleSummarizeChat(chatId)}
           summaryLoading={summaryLoading}
+          isOtherUserOnline={isOtherUserOnline}
         />
       </div>
 
@@ -193,8 +238,8 @@ const ChatArea = ({ chat, currentUserId, onBack, className = "" }) => {
       <div className="flex-shrink-0 border-t border-gray-700">
         <TypingArea
           onSendMessage={handleSendMessage}
-          onStartTyping={startTyping}
-          onStopTyping={stopTyping}
+          onStartTyping={handleStartTyping}
+          onStopTyping={handleStopTyping}
           disabled={!isConnected}
           placeholder={`Message ${chat?.displayName || "..."}`}
         />

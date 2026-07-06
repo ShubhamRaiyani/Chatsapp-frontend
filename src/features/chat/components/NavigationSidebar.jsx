@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import Avatar from "./ui/Avatar";
 import ProfileSettingsModal from "./ProfileSettingsModal";
 import { MessageSquare, User, Users, LogOut, Settings } from "lucide-react";
+import logo from "../../../assets/images/logo.png";
 
 const NavigationSidebar = ({ activeSection, onSectionChange, user, onLogout }) => {
   const [showUserMenu, setShowUserMenu] = useState(false);
@@ -15,10 +16,10 @@ const NavigationSidebar = ({ activeSection, onSectionChange, user, onLogout }) =
 
   return (
     <>
-      <div className="w-16 bg-[#111118] border-r border-white/5 flex flex-col items-center py-3 gap-1">
+      <div className="w-full bg-[#111118] border-r border-white/5 flex flex-col items-center py-3 gap-1 h-full">
         {/* Logo mark */}
-        <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center mb-4 flex-shrink-0">
-          <MessageSquare size={18} className="text-white" strokeWidth={2.5} />
+        <div className="md:w-10 md:h-10 w-9 h-9 mb-4 flex-shrink-0">
+          <img src={logo} alt="Chatsapp" className="w-full h-full object-contain" />
         </div>
 
         {/* Nav items */}
@@ -31,7 +32,7 @@ const NavigationSidebar = ({ activeSection, onSectionChange, user, onLogout }) =
                 onClick={() => onSectionChange(id)}
                 title={label}
                 className={`
-                  relative group w-11 h-11 rounded-xl flex flex-col items-center justify-center
+                  relative group md:w-11 md:h-11 w-9 h-9 rounded-xl flex flex-col items-center justify-center
                   transition-all duration-150
                   ${isActive
                     ? "bg-blue-500/20 text-blue-400"
@@ -42,7 +43,8 @@ const NavigationSidebar = ({ activeSection, onSectionChange, user, onLogout }) =
                 {isActive && (
                   <span className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 bg-blue-400 rounded-r-full" />
                 )}
-                <Icon size={20} strokeWidth={isActive ? 2.5 : 2} />
+                <Icon size={18} className="md:hidden" strokeWidth={isActive ? 2.5 : 2} />
+                <Icon size={20} className="hidden md:block" strokeWidth={isActive ? 2.5 : 2} />
 
                 {/* Tooltip */}
                 <span className="absolute left-full ml-3 px-2.5 py-1.5 bg-gray-800 text-white text-xs rounded-lg
@@ -55,11 +57,11 @@ const NavigationSidebar = ({ activeSection, onSectionChange, user, onLogout }) =
           })}
         </div>
 
-        {/* User avatar + menu */}
-        <div className="relative flex flex-col items-center gap-2 mt-2">
+        {/* User avatar + menu — pinned to bottom */}
+        <div className="relative flex flex-col items-center gap-2 mt-auto pt-2">
           <button
             onClick={() => setShowUserMenu(!showUserMenu)}
-            className="w-9 h-9 rounded-xl overflow-hidden ring-2 ring-transparent hover:ring-blue-500/50 transition-all duration-150"
+            className="md:w-9 md:h-9 w-8 h-8 rounded-xl overflow-hidden ring-2 ring-transparent hover:ring-blue-500/50 transition-all duration-150"
           >
             <Avatar src={user?.avatar} alt={user?.username || user?.name || "U"} size="sm" />
           </button>

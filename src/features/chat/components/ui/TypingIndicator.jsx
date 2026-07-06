@@ -4,13 +4,15 @@ import React from "react";
 const TypingIndicator = ({ users = [], className = "" }) => {
   if (!users || users.length === 0) return null;
 
+  const name = (u) => u?.name || "Someone";
+
   const renderTypingText = () => {
     if (users.length === 1) {
-      return `${users[0].name} is typing...`;
+      return `${name(users[0])} is typing...`;
     } else if (users.length === 2) {
-      return `${users[0].name} and ${users[1].name} are typing...`;
+      return `${name(users[0])} and ${name(users[1])} are typing...`;
     } else {
-      return `${users[0].name} and ${users.length - 1} others are typing...`;
+      return `${name(users[0])} and ${users.length - 1} others are typing...`;
     }
   };
 

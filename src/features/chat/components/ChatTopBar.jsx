@@ -9,6 +9,7 @@ const ChatTopBar = ({
   onBack,
   onSummarize,
   summaryLoading = false,
+  isOtherUserOnline = false,
   className = "",
 }) => {
   const [showDropdown, setShowDropdown] = useState(false);
@@ -31,9 +32,8 @@ const ChatTopBar = ({
   }, [showDropdown]);
 
   const title = chat?.displayName || (chat?.isGroup ? "Group Chat" : "Unknown");
-  const subtitle = chat?.isGroup
-    ? `${chat.participantEmails?.length || 0} members`
-    : chat?.receiverEmail || "";
+  const memberCount = chat?.participantEmails?.length || 0;
+  const subtitle = chat?.isGroup ? `${memberCount} member${memberCount !== 1 ? "s" : ""}` : null;
 
   return (
     <div className={`flex items-center gap-3 px-4 py-3 bg-gray-900 border-b border-white/[0.06] ${className}`}>
@@ -47,14 +47,29 @@ const ChatTopBar = ({
         </button>
       )}
 
-      {/* Avatar */}
-      <Avatar src={chat?.avatar || null} alt={title} size="md" className="flex-shrink-0" />
+      {/* Avatar with online dot for direct chats */}
+      <div className="relative flex-shrink-0">
+        <Avatar src={chat?.avatar || null} alt={title} size="md" />
+        {!chat?.isGroup && (
+          <span
+            className={`absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full border-2 border-gray-900 transition-colors duration-300 ${
+              isOtherUserOnline ? "bg-emerald-400" : "bg-gray-500"
+            }`}
+          />
+        )}
+      </div>
 
-      {/* Title & subtitle */}
+      {/* Title & status */}
       <div className="flex-1 min-w-0">
         <h2 className="text-[0.9rem] font-semibold text-white truncate leading-tight">{title}</h2>
-        {subtitle && (
+        {chat?.isGroup ? (
           <p className="text-xs text-gray-500 truncate leading-tight mt-0.5">{subtitle}</p>
+        ) : (
+          <p className={`text-xs font-medium leading-tight mt-0.5 transition-colors duration-300 ${
+            isOtherUserOnline ? "text-emerald-400" : "text-gray-500"
+          }`}>
+            {isOtherUserOnline ? "Online" : "Offline"}
+          </p>
         )}
       </div>
 
@@ -62,23 +77,45 @@ const ChatTopBar = ({
       <div className="flex items-center gap-1 flex-shrink-0">
         {/* AI Summary button */}
         {onSummarize && (
-          <button
-            onClick={() => onSummarize(chat?.id)}
-            disabled={summaryLoading}
-            title="Generate AI Summary"
-            className={`
-              w-9 h-9 rounded-xl flex items-center justify-center transition-all duration-150
-              ${summaryLoading
-                ? "opacity-50 cursor-not-allowed bg-white/5"
-                : "bg-blue-600/80 hover:bg-blue-500/80 shadow-md shadow-blue-500/20 active:scale-95"
+          <div className="relative group">
+            <button
+              onClick={() => onSummarize(chat?.id)}
+              disabled={summaryLoading}
+              className={`
+                w-9 h-9 rounded-xl flex items-center justify-center transition-all duration-150
+                ${summaryLoading
+                  ? "opacity-50 cursor-not-allowed bg-white/5"
+                  : "bg-blue-600/80 hover:bg-blue-500/80 shadow-md shadow-blue-500/20 active:scale-95"
+                }
+              `}
+            >
+              {summaryLoading
+                ? <div className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+                : <Sparkles size={16} className="text-white" />
               }
-            `}
-          >
-            {summaryLoading
-              ? <div className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
-              : <Sparkles size={16} className="text-white" />
-            }
-          </button>
+            </button>
+
+            {/* Tooltip */}
+            {!summaryLoading && (
+              <div className="absolute bottom-full right-0 mb-2.5 pointer-events-none
+                opacity-0 invisible group-hover:opacity-100 group-hover:visible
+                transition-all duration-150 z-50">
+                <div className="bg-gray-800 border border-white/10 rounded-xl shadow-2xl px-3 py-2.5 w-48">
+                  <div className="flex items-center gap-2 mb-1">
+                    <Sparkles size={12} className="text-blue-400 flex-shrink-0" />
+                    <span className="text-white text-xs font-semibold">AI Summary</span>
+                  </div>
+                  <p className="text-gray-400 text-[11px] leading-relaxed">
+                    Summarise the last 2 days of messages in this chat.
+                  </p>
+                </div>
+                {/* Arrow */}
+                <div className="absolute right-3 top-full w-2.5 h-2.5 overflow-hidden -mt-px">
+                  <div className="w-2 h-2 bg-gray-800 border-r border-b border-white/10 rotate-45 -translate-y-1/2 translate-x-px" />
+                </div>
+              </div>
+            )}
+          </div>
         )}
 
         {/* More menu */}
