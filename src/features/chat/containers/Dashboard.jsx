@@ -18,6 +18,20 @@ const Dashboard = ({ className = "" }) => {
   // Get chat context for creating chats
   const { createPersonalChat, createGroupChat, selectChat, chats, refreshChats ,loadChats} = useChat();
 
+  // Keep activeChat in sync with the chats array.
+  // - If the chat was updated (e.g. new members added) → apply fresh data.
+  // - If the chat is gone (e.g. user left a group) → navigate back immediately
+  //   without waiting for the slow loadChats() call to finish.
+  useEffect(() => {
+    if (!activeChat) return;
+    const updated = chats.find((c) => c.id === activeChat.id);
+    if (updated && updated !== activeChat) {
+      setActiveChat(updated);
+    } else if (!updated) {
+      setActiveChat(null);
+    }
+  }, [chats]);
+
   // Calculate chat counts from actual data
   const getChatCounts = () => {
     const total = chats.filter((chat) => !chat.archived).length;

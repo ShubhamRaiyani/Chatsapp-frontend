@@ -167,6 +167,17 @@ async getMessagesCursorForGroup(groupId, beforeMessageId = null, limit = 20) {
 
   // Add this method to your ChatAPI.jsx
 
+  async addGroupMembers(groupId, emails) {
+    const response = await fetch(`${API_BASE}/chats/group/${groupId}/members`, {
+      method: "POST",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(emails),
+    });
+    if (!response.ok) throw new Error(await response.text());
+    return response.text();
+  },
+
   async leaveGroup(groupId) {
     try {
       const response = await fetch(`${API_BASE}/chats/group/${groupId}/leave`, {

@@ -130,6 +130,7 @@ export function AuthProvider({ children }) {
         logout,
         verifyEmail,
         loginWithToken,
+        refreshUser: fetchUserProfile,
       }}
     >
       {children}

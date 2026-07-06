@@ -240,6 +240,7 @@ const ChatArea = ({ chat, currentUserId, onBack, className = "" }) => {
           onSendMessage={handleSendMessage}
           onStartTyping={handleStartTyping}
           onStopTyping={handleStopTyping}
+          chatId={chat?.id}
           disabled={!isConnected}
           placeholder={`Message ${chat?.displayName || "..."}`}
         />
@@ -255,6 +256,7 @@ const ChatArea = ({ chat, currentUserId, onBack, className = "" }) => {
           onClose={handleCloseChatInfo}
           onMuteChat={handleMuteChat}
           onLeaveGroup={handleLeaveGroup}
+          onMembersUpdated={refreshChats}
         />
         // </div>
       )}

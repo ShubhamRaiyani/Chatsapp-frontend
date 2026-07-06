@@ -91,6 +91,20 @@ const AuthService = {
         }
     },
 
+    async checkUsername(username) {
+        const response = await apiClient.get(`/users/check-username?username=${encodeURIComponent(username)}`);
+        return response.data.available; // true = free to use
+    },
+
+    async updateUsername(username) {
+        try {
+            const response = await apiClient.put("/users/username", { username });
+            return response.data;
+        } catch (error) {
+            throw new Error(error.customMessage || error.response?.data || "Failed to update username");
+        }
+    },
+
     async changePassword(oldPassword, newPassword) {
         try {
             const response = await apiClient.post("/auth/change-password", { oldPassword, newPassword });

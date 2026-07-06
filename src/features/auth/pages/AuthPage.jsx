@@ -59,7 +59,7 @@ export default function AuthPage() {
         const token = result.token || getCookieValue("jwt");
         if (token) localStorage.setItem("authToken", token);
         toast.success("Login successful!");
-        navigate("/dashboard");
+        navigate("/dashboard", { replace: true });
       } else {
         toast.error(result.message || "Login failed");
       }

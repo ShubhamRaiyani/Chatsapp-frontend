@@ -105,7 +105,7 @@ const NavigationSidebar = ({ activeSection, onSectionChange, user, onLogout }) =
       </div>
 
       {showProfileModal && (
-        <ProfileSettingsModal user={user} onClose={() => setShowProfileModal(false)} />
+        <ProfileSettingsModal onClose={() => setShowProfileModal(false)} />
       )}
     </>
   );

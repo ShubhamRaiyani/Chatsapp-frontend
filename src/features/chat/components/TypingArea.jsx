@@ -5,6 +5,7 @@ const TypingArea = ({
   onSendMessage,
   onStartTyping,
   onStopTyping,
+  chatId,
   disabled = false,
   placeholder = "Type a message...",
   className = "",
@@ -13,6 +14,10 @@ const TypingArea = ({
   const [isTyping, setIsTyping] = useState(false);
   const textareaRef = useRef(null);
   const typingTimeoutRef = useRef(null);
+
+  useEffect(() => {
+    if (chatId) textareaRef.current?.focus();
+  }, [chatId]);
 
   const resizeTextarea = () => {
     const el = textareaRef.current;
