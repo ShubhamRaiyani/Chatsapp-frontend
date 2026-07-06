@@ -4,6 +4,7 @@ import NavigationSidebar from "../components/NavigationSidebar";
 import ChatList from "./ChatList";
 import ChatArea from "./ChatArea";
 import EmptyState from "../components/EmptyState";
+import FullscreenPrompt from "../components/FullscreenPrompt";
 import { useAuth } from "../../auth/hooks/useAuth";
 import { useChat } from "../hooks/useChat";
 
@@ -14,6 +15,22 @@ const Dashboard = ({ className = "" }) => {
   const [isMobile, setIsMobile] = useState(false);
   const [showChatList, setShowChatList] = useState(true);
   const [showNewChatModal, setShowNewChatModal] = useState(false);
+
+  // Track the visual viewport height so the mobile container shrinks correctly
+  // when the software keyboard opens, keeping the top bar always visible.
+  const [vpHeight, setVpHeight] = useState(
+    () => window.visualViewport?.height ?? window.innerHeight
+  );
+  useEffect(() => {
+    const update = () =>
+      setVpHeight(window.visualViewport?.height ?? window.innerHeight);
+    window.visualViewport?.addEventListener("resize", update);
+    window.visualViewport?.addEventListener("scroll", update);
+    return () => {
+      window.visualViewport?.removeEventListener("resize", update);
+      window.visualViewport?.removeEventListener("scroll", update);
+    };
+  }, []);
 
   // Get chat context for creating chats
   const { createPersonalChat, createGroupChat, selectChat, chats, refreshChats ,loadChats} = useChat();
@@ -174,32 +191,38 @@ const Dashboard = ({ className = "" }) => {
   };
 
   return isMobile ? (
-    // Mobile view
-    activeChat ? (
-      // Chat open: show ChatArea with Back button
-      <div className="h-[100dvh] w-full flex flex-col bg-[#0e0e1a] overflow-hidden fixed inset-0">
-        <ChatArea
-          chat={activeChat}
-          currentUserId={user?.email}
-          onBack={handleBackToChatList}
-        />
-      </div>
-    ) : (
-      // No chat selected: show only the chat list
-      <div className="h-[100dvh] w-full bg-[#0e0e1a] overflow-hidden fixed inset-0">
-      <ChatList
-        chats={chats}
-        currentUserId={user?.email}
-        activeChat={activeChat}
-        onChatSelect={handleChatSelect}
-        onNewChat={handleNewChat}
-        user={user}
-        onLogout={handleLogout}
-        activeSection={activeSection}
-        onSectionChange={handleSectionChange}
-      />
-    </div>
-    )
+    <>
+      {activeChat ? (
+        <div
+          className="w-full flex flex-col bg-[#0e0e1a] overflow-hidden fixed top-0 left-0 right-0"
+          style={{ height: vpHeight }}
+        >
+          <ChatArea
+            chat={activeChat}
+            currentUserId={user?.email}
+            onBack={handleBackToChatList}
+          />
+        </div>
+      ) : (
+        <div
+          className="w-full bg-[#0e0e1a] overflow-hidden fixed top-0 left-0 right-0"
+          style={{ height: vpHeight }}
+        >
+          <ChatList
+            chats={chats}
+            currentUserId={user?.email}
+            activeChat={activeChat}
+            onChatSelect={handleChatSelect}
+            onNewChat={handleNewChat}
+            user={user}
+            onLogout={handleLogout}
+            activeSection={activeSection}
+            onSectionChange={handleSectionChange}
+          />
+        </div>
+      )}
+      <FullscreenPrompt />
+    </>
   ) : (
     // Desktop/tablet view: original layout
     <div
