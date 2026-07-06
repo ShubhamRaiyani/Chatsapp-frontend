@@ -61,14 +61,11 @@ const Dashboard = ({ className = "" }) => {
 
   // Handle chat selection
   const handleChatSelect = async (chat) => {
-    console.log("Dashboard: Selecting chat:", chat);
     setActiveChat(chat);
-    // Select chat in context to load messages
     await selectChat(chat);
     if (isMobile) {
       setShowChatList(false);
     }
-    refreshChats();
   };
 
   // Handle back to chat list (mobile)
@@ -166,7 +163,7 @@ const Dashboard = ({ className = "" }) => {
     // Mobile view
     activeChat ? (
       // Chat open: show ChatArea with Back button
-      <div className="h-[100dvh] w-full flex flex-col bg-gray-900 overflow-hidden fixed inset-0">
+      <div className="h-[100dvh] w-full flex flex-col bg-[#0e0e1a] overflow-hidden fixed inset-0">
         <ChatArea
           chat={activeChat}
           currentUserId={user?.email}
@@ -175,7 +172,7 @@ const Dashboard = ({ className = "" }) => {
       </div>
     ) : (
       // No chat selected: show only the chat list
-      <div className="h-[100dvh] w-full bg-gray-900 overflow-hidden fixed inset-0">
+      <div className="h-[100dvh] w-full bg-[#0e0e1a] overflow-hidden fixed inset-0">
       <ChatList
         chats={chats}
         currentUserId={user?.email}
@@ -192,7 +189,7 @@ const Dashboard = ({ className = "" }) => {
   ) : (
     // Desktop/tablet view: original layout
     <div
-      className={`h-screen w-full flex overflow-hidden bg-gray-900 ${className}`}
+      className={`h-screen w-full flex overflow-hidden bg-[#0e0e1a] ${className}`}
     >
       {/* Navigation Sidebar */}
       <div className="flex-shrink-0 md:w-16 w-12">
@@ -206,7 +203,7 @@ const Dashboard = ({ className = "" }) => {
       </div>
 
       {/* Chat List Sidebar */}
-      <div className="flex-shrink-0 w-80 bg-gray-800 border-r border-gray-700">
+      <div className="flex-shrink-0 w-80 bg-[#13131f] border-r border-white/[0.06]">
         <ChatList
           chats={chats}
           currentUserId={user?.email}

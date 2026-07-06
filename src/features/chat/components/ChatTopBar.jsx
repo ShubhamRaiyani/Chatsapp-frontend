@@ -1,20 +1,9 @@
 import React, { useState, useEffect } from "react";
 import Avatar from "./ui/Avatar";
-import {
-  Phone,
-  Video,
-  Info,
-  Users,
-  MoreVertical,
-  ArrowLeft,
-  Search,
-  Sparkles,
-} from "lucide-react";
+import { ArrowLeft, Sparkles, MoreVertical, Info, Users } from "lucide-react";
 
 const ChatTopBar = ({
   chat,
-  onStartCall,
-  onStartVideoCall,
   onShowInfo,
   onShowMembers,
   onBack,
@@ -25,164 +14,98 @@ const ChatTopBar = ({
   const [showDropdown, setShowDropdown] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
 
-  // Mobile detection
   useEffect(() => {
-    const checkMobile = () => {
-      setIsMobile(window.innerWidth < 768);
-    };
-    checkMobile();
-    window.addEventListener("resize", checkMobile);
-    return () => window.removeEventListener("resize", checkMobile);
+    const check = () => setIsMobile(window.innerWidth < 768);
+    check();
+    window.addEventListener("resize", check);
+    return () => window.removeEventListener("resize", check);
   }, []);
 
-  // Close dropdown when clicking outside
   useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (showDropdown && !event.target.closest(".dropdown-container")) {
-        setShowDropdown(false);
-      }
+    if (!showDropdown) return;
+    const handler = (e) => {
+      if (!e.target.closest(".topbar-dropdown")) setShowDropdown(false);
     };
-
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
   }, [showDropdown]);
 
-  const getChatTitle = () => {
-    if (chat.isGroup) {
-      return chat.displayName || "Group Chat";
-    }
-    return chat.displayName || "Unknown User";
-  };
-
-  const getChatSubtitle = () => {
-    if (chat.isGroup) {
-      const memberCount = chat.participantEmails?.length || 0;
-      return `${memberCount} member${memberCount !== 1 ? "s" : ""}`;
-    }
-    return chat.receiverEmail || "Offline";
-  };
-
-  const getAvatarSrc = () => {
-    return chat.avatar || null;
-  };
-
-  const getStatus = () => {
-    if (chat.isGroup) return null;
-    return "online";
-  };
+  const title = chat?.displayName || (chat?.isGroup ? "Group Chat" : "Unknown");
+  const subtitle = chat?.isGroup
+    ? `${chat.participantEmails?.length || 0} members`
+    : chat?.receiverEmail || "";
 
   return (
-    <div
-      className={`
-      flex items-center justify-between p-3 md:p-4 bg-gray-800 border-b border-gray-700
-      ${className}
-    `}
-    >
-      {/* Left section with back button and chat info */}
-      <div className="flex items-center gap-3 flex-1 min-w-0">
-        {/* Back button - only show on mobile */}
-        {isMobile && onBack && (
-          <button
-            onClick={onBack}
-            className="flex items-center justify-center w-8 h-8 rounded-full hover:bg-gray-700 text-gray-400 hover:text-white transition-colors"
-          >
-            <ArrowLeft size={18} />
-          </button>
+    <div className={`flex items-center gap-3 px-4 py-3 bg-gray-900 border-b border-white/[0.06] ${className}`}>
+      {/* Back (mobile) */}
+      {isMobile && onBack && (
+        <button
+          onClick={onBack}
+          className="flex-shrink-0 w-8 h-8 flex items-center justify-center rounded-xl text-gray-400 hover:text-white hover:bg-white/5 transition-all"
+        >
+          <ArrowLeft size={18} />
+        </button>
+      )}
+
+      {/* Avatar */}
+      <Avatar src={chat?.avatar || null} alt={title} size="md" className="flex-shrink-0" />
+
+      {/* Title & subtitle */}
+      <div className="flex-1 min-w-0">
+        <h2 className="text-[0.9rem] font-semibold text-white truncate leading-tight">{title}</h2>
+        {subtitle && (
+          <p className="text-xs text-gray-500 truncate leading-tight mt-0.5">{subtitle}</p>
         )}
-
-        {/* Avatar */}
-        <Avatar
-          src={getAvatarSrc()}
-          alt={getChatTitle()}
-          className="w-8 h-8 md:w-10 md:h-10 flex-shrink-0"
-          status={getStatus()}
-        />
-
-        {/* Chat title and subtitle */}
-        <div className="flex flex-col min-w-0 flex-1">
-          <h2 className="font-medium text-white text-sm md:text-base truncate">
-            {getChatTitle()}
-          </h2>
-          <div className="flex items-center gap-2">
-            <p className="text-xs md:text-sm text-gray-400 truncate">
-            </p>
-            {chat?.isTyping && (
-              <span className="text-xs text-blue-400 animate-pulse">
-                typing...
-              </span>
-            )}
-          </div>
-        </div>
       </div>
 
-      {/* Right section - Action buttons */}
-      <div className="flex items-center gap-1 md:gap-2">
-        {/* Hide some buttons on mobile to save space */}
-
-        {/* Summary button */}
+      {/* Actions */}
+      <div className="flex items-center gap-1 flex-shrink-0">
+        {/* AI Summary button */}
         {onSummarize && (
           <button
-            onClick={() => {
-              onSummarize(chat.id)
-              console.log("Summarize button clicked for chat ID:", chat.id);
-            }}
+            onClick={() => onSummarize(chat?.id)}
             disabled={summaryLoading}
-            className="
-              relative p-3 rounded-full
-              bg-gradient-to-r from-pink-500 via-purple-500 to-blue-500
-              text-white shadow-lg
-              transition-all duration-300
-              hover:scale-110 hover:shadow-2xl
-              disabled:opacity-50 disabled:cursor-not-allowed
-            "
-            title="Generate Chat Summary"
+            title="Generate AI Summary"
+            className={`
+              w-9 h-9 rounded-xl flex items-center justify-center transition-all duration-150
+              ${summaryLoading
+                ? "opacity-50 cursor-not-allowed bg-white/5"
+                : "bg-blue-600/80 hover:bg-blue-500/80 shadow-md shadow-blue-500/20 active:scale-95"
+              }
+            `}
           >
-            {summaryLoading ? (
-              <div className="animate-spin w-5 h-5 border-2 border-white border-t-transparent rounded-full" />
-            ) : (
-              <Sparkles
-                size={28}
-                className="text-white drop-shadow-[0_0_10px_rgba(255,255,255,0.9)]"
-              />
-            )}
-            {!summaryLoading && (
-              <span className="absolute inset-0 rounded-full bg-gradient-to-r from-pink-400 via-purple-400 to-blue-400 opacity-70 blur-xl animate-pulse -z-10" />
-            )}
+            {summaryLoading
+              ? <div className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+              : <Sparkles size={16} className="text-white" />
+            }
           </button>
         )}
 
-        {/* More options dropdown */}
-        <div className="relative dropdown-container">
+        {/* More menu */}
+        <div className="relative topbar-dropdown">
           <button
             onClick={() => setShowDropdown(!showDropdown)}
-            className="flex items-center justify-center w-8 h-8 md:w-10 md:h-10 rounded-full hover:bg-gray-700 text-gray-400 hover:text-white transition-colors"
+            className="w-9 h-9 flex items-center justify-center rounded-xl text-gray-400 hover:text-white hover:bg-white/5 transition-all"
           >
-            <MoreVertical size={16} className="md:w-5 md:h-5" />
+            <MoreVertical size={18} />
           </button>
 
-          {/* Mobile-friendly dropdown */}
           {showDropdown && (
-            <div className="absolute right-0 mt-2 w-48 bg-gray-700 rounded-lg shadow-lg border border-gray-600 z-50">
+            <div className="absolute right-0 top-full mt-2 w-48 bg-[#1c1c28] border border-white/10 rounded-xl shadow-2xl z-50 overflow-hidden py-1">
               <button
-                onClick={() => {
-                  onShowInfo?.(chat);
-                  setShowDropdown(false);
-                }}
-                className="flex items-center gap-3 w-full px-4 py-2 text-left text-gray-200 hover:bg-gray-600 transition-colors"
+                onClick={() => { onShowInfo?.(chat); setShowDropdown(false); }}
+                className="w-full px-4 py-2.5 flex items-center gap-3 text-sm text-gray-300 hover:bg-white/5 transition-colors text-left"
               >
-                <Info size={16} />
-                <span>Chat Info</span>
+                <Info size={15} className="text-gray-400" />
+                Chat Info
               </button>
               {chat?.isGroup && (
                 <button
-                  onClick={() => {
-                    onShowMembers?.(chat);
-                    setShowDropdown(false);
-                  }}
-                  className="flex items-center gap-3 w-full px-4 py-2 text-left text-gray-200 hover:bg-gray-600 transition-colors rounded-b-lg"
+                  onClick={() => { onShowMembers?.(chat); setShowDropdown(false); }}
+                  className="w-full px-4 py-2.5 flex items-center gap-3 text-sm text-gray-300 hover:bg-white/5 transition-colors text-left"
                 >
-                  <Users size={16} />
-                  <span>View Members</span>
+                  <Users size={15} className="text-gray-400" />
+                  View Members
                 </button>
               )}
             </div>

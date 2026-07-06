@@ -132,13 +132,9 @@ const Sidebar = ({
   };
 
   return (
-    <div className={`h-full flex flex-col bg-gray-800 ${className}`}>
+    <div className={`h-full flex flex-col bg-[#13131f] ${className}`}>
       {/* Header with search */}
-      <div
-        className={`flex-shrink-0 ${
-          isMobile ? "p-3" : "p-4"
-        } border-b border-gray-700`}
-      >
+      <div className={`flex-shrink-0 ${isMobile ? "p-3" : "p-4"} border-b border-white/[0.06]`}>
         {/* Title and count */}
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-3">
@@ -291,56 +287,46 @@ const Sidebar = ({
             </h1>
           </div>
           <div className="flex items-center gap-2">
-            <span
-              className={`text-gray-400 ${isMobile ? "text-xs" : "text-sm"}`}
-            >
-              {filteredChats.length}{" "}
-              {filteredChats.length === 1 ? "conversation" : "conversations"}
+            <span className={`text-gray-500 ${isMobile ? "text-xs" : "text-xs"}`}>
+              {filteredChats.length}
             </span>
             <button
               onClick={() => setShowNewChatModal(true)}
-              className="flex items-center justify-center w-8 h-8 rounded-full bg-blue-600 hover:bg-blue-700 text-white transition-colors"
+              className="flex items-center justify-center w-8 h-8 rounded-xl bg-blue-600 hover:bg-blue-500 text-white transition-all active:scale-95 shadow-md shadow-blue-500/20"
             >
-              <Plus size={16} />
+              <Plus size={15} />
             </button>
           </div>
         </div>
 
-        {/* Search input - mobile optimized */}
+        {/* Search */}
         <div className="relative">
           <input
             type="text"
-            placeholder="Search conversations..."
+            placeholder="Search conversations…"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className={`
-              w-full bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400
-              focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent
-              ${isMobile ? "px-3 py-2 text-sm pl-9" : "px-4 py-3 pl-10"}
-            `}
+            className="w-full bg-white/[0.05] border border-white/[0.07] rounded-xl text-sm text-white placeholder-gray-500
+              focus:outline-none focus:border-blue-500/50 focus:bg-white/[0.07] transition-all
+              pl-9 pr-3 py-2.5"
           />
-          <Search
-            className={`
-            absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400
-            ${isMobile ? "w-4 h-4" : "w-5 h-5"}
-          `}
-          />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
         </div>
       </div>
 
       {/* Chat list */}
       <div className="flex-1 overflow-y-auto custom-scrollbar">
         {filteredChats.length > 0 ? (
-          <div className={isMobile ? "py-2" : "py-3"}>
+          <div className="py-1.5">
             {filteredChats.map((chat) => (
               <ChatCard
-                key={chat.email}
+                key={chat.id}
                 chat={chat}
-                isActive={activeChat?.email === chat.email}
+                isActive={activeChat?.id === chat.id}
                 onClick={() => onChatSelect(chat)}
                 currentUserId={currentUserId}
                 isMobile={isMobile}
-              />  
+              />
             ))}
           </div>
         ) : (
@@ -350,8 +336,8 @@ const Sidebar = ({
             ${isMobile ? "p-6" : "p-8"}
           `}
           >
-            <div className={`${isMobile ? "text-4xl mb-3" : "text-6xl mb-4"}`}>
-              💬
+            <div className={`${isMobile ? "mb-3" : "mb-4"} text-gray-600`}>
+              <MessageSquare size={isMobile ? 36 : 48} strokeWidth={1.5} />
             </div>
             <h3
               className={`font-medium text-gray-300 mb-2 ${

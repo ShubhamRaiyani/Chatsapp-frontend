@@ -1,144 +1,86 @@
 import React from "react";
-// import Avatar from "./Avatar"; // Avatar no longer needed
 import { formatMessageTime } from "../../utils/dateUtils";
 
-const MessageBubble = ({
-  message,
-  isOwn,
-  showAvatar = true, // Kept prop for compatibility but ignored
-  isGrouped = false,
-  currentUserId,
-  UsernameofChat,
-}) => {
+const MessageBubble = ({ message, isOwn, isGrouped = false, UsernameofChat }) => {
   const messageType = message.type || message.messageType;
   const isSummary = messageType === "SUMMARY" || messageType === "Summary";
+  const isImage = messageType === "image" || messageType === "IMAGE";
 
-  const renderMessageContent = () => {
+  const senderName = isOwn ? null : (message.senderUsername || message.senderName || UsernameofChat);
+
+  const renderContent = () => {
     switch (messageType) {
       case "text":
       case "TEXT":
-        return (
-          <div className="text-white text-sm leading-5 break-words">
-            {message.content}
-          </div>
-        );
+      default:
+        return <p className="text-[0.875rem] leading-relaxed break-words whitespace-pre-wrap">{message.content}</p>;
 
       case "SUMMARY":
       case "Summary":
         return (
-          <div className="summary-content">
-            <div className="flex items-center gap-2 mb-3 pb-2 border-b border-gray-600">
-              <div className="w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center text-xs">
-                🤖
-              </div>
-              <span className="text-blue-200 text-sm font-medium">
-                AI Chat Summary (Last 2 Days)
-              </span>
+          <div>
+            <div className="flex items-center gap-2 mb-2.5 pb-2.5 border-b border-white/20">
+              <span className="text-xs font-bold text-blue-300 bg-blue-500/20 px-1.5 py-0.5 rounded">AI</span>
+              <span className="text-xs font-semibold text-blue-200 uppercase tracking-wide">Summary · Last 2 days</span>
             </div>
-            <div className="text-gray-100 text-sm leading-relaxed whitespace-pre-wrap">
-              {message.content}
-            </div>
+            <p className="text-sm leading-relaxed whitespace-pre-wrap text-gray-100">{message.content}</p>
           </div>
         );
 
       case "image":
       case "IMAGE":
         return (
-          <div className="image-message">
-            <img
-              src={message.content || message.imageUrl}
-              alt="Shared image"
-              className="rounded-lg max-w-full h-auto max-h-96 object-cover"
-              loading="lazy"
-            />
-          </div>
+          <img
+            src={message.content || message.imageUrl}
+            alt="Shared image"
+            className="rounded-xl max-w-full h-auto max-h-80 object-cover block"
+            loading="lazy"
+          />
         );
 
       case "file":
       case "FILE":
         return (
-          <div className="flex items-center gap-3 p-2 bg-white/10 rounded-lg">
-            <div className="w-10 h-10 bg-blue-500 rounded-lg flex items-center justify-center text-white">
-              📎
+          <div className="flex items-center gap-3 p-2 bg-white/10 rounded-xl">
+            <div className="w-9 h-9 bg-blue-500/80 rounded-lg flex items-center justify-center flex-shrink-0 text-white text-xs font-bold">FILE</div>
+            <div className="min-w-0">
+              <p className="text-sm font-medium truncate">{message.fileName || "File"}</p>
+              {message.fileSize && <p className="text-xs text-white/60">{message.fileSize}</p>}
             </div>
-            <div className="flex-1 min-w-0">
-              <div className="text-white text-sm font-medium truncate">
-                {message.fileName || "File"}
-              </div>
-              {message.fileSize && (
-                <div className="text-gray-400 text-xs">{message.fileSize}</div>
-              )}
-            </div>
-          </div>
-        );
-
-      default:
-        return (
-          <div className="text-white text-sm leading-5 break-words">
-            {message.content}
           </div>
         );
     }
   };
 
   return (
-    <div
-      className={`flex gap-2 mb-4 ${isOwn ? "justify-end" : "justify-start"} ${
-        isGrouped ? "mt-1" : "mt-4"
-      }`}
-    >
-      {/* 
-        Avatar removed as per user request to clean up UI.
-        Original logic: {showAvatar && !isOwn && ... <Avatar />} 
-      */}
+    <div className={`flex ${isOwn ? "justify-end" : "justify-start"} ${isGrouped ? "mt-0.5" : "mt-3"} px-4`}>
+      <div className={`flex flex-col ${isOwn ? "items-end" : "items-start"} max-w-[72%] sm:max-w-[58%]`}>
 
-      {/* Message content container */}
-      <div
-        className={`flex flex-col max-w-[75%] sm:max-w-[60%] ${
-          isOwn ? "items-end" : "items-start"
-        }`}
-      >
-        {/* 
-           Sender name removed as per user request.
-           Original logic: {!isOwn && !isGrouped && <div className="text-gray-400...">...</div>}
-        */}
+        {/* Sender name for incoming group messages */}
+        {!isOwn && !isGrouped && senderName && (
+          <span className="text-[11px] font-semibold text-blue-400 mb-1 ml-1">{senderName}</span>
+        )}
 
-        {/* Message bubble */}
+        {/* Bubble */}
         <div
-          className={`relative px-4 py-3 rounded-2xl shadow-sm ${
-            isSummary
-              ? "bg-gradient-to-r from-blue-600 to-blue-700 max-w-none w-full"
+          className={`
+            relative px-3.5 py-2.5 shadow-sm
+            ${isSummary
+              ? "bg-gradient-to-br from-blue-600/90 to-indigo-700/90 rounded-2xl w-full max-w-none backdrop-blur-sm border border-white/10"
               : isOwn
-              ? "bg-blue-500 text-white rounded-br-md"
-              : "bg-gray-700 text-white rounded-bl-md"
-          } ${messageType === "image" || messageType === "IMAGE" ? "p-1" : ""}`}
-        >
-          {/* Message content */}
-          <div
-            className={
-              messageType === "image" || messageType === "IMAGE" ? "" : "mb-1"
+                ? "bg-blue-600 text-white rounded-2xl rounded-tr-sm"
+                : "bg-[#1e2130] text-gray-100 rounded-2xl rounded-tl-sm border border-white/5"
             }
-          >
-            {renderMessageContent()}
-          </div>
+            ${isImage ? "p-1 overflow-hidden" : ""}
+          `}
+        >
+          <div className={isImage ? "" : "mb-1"}>{renderContent()}</div>
 
-          {/* Message timestamp */}
-          <div
-            className={`flex items-center justify-end gap-1 mt-1 ${
-              messageType === "image" || messageType === "IMAGE"
-                ? "absolute bottom-2 right-2 bg-black/50 px-2 py-1 rounded-full"
-                : ""
-            }`}
-          >
-            <span
-              className={`text-xs leading-none ${
-                isSummary
-                  ? "text-blue-100"
-                  : messageType === "image" || messageType === "IMAGE"
-                  ? "text-white"
-                  : "text-gray-300"
-              }`}
-            >
+          {/* Timestamp */}
+          <div className={`flex items-center justify-end mt-1 ${isImage ? "absolute bottom-2 right-2 bg-black/50 px-2 py-0.5 rounded-full" : ""}`}>
+            <span className={`text-[10px] leading-none ${
+              isSummary ? "text-blue-200/70" : isImage ? "text-white" : isOwn ? "text-white/60" : "text-gray-500"
+            }`}>
               {formatMessageTime(message.sentAt || message.createdAt)}
             </span>
           </div>

@@ -26,6 +26,9 @@ export function ChatProvider({ children }) {
   const currentSessionRef = useRef(null);
   const connectionListeners = useRef([]);
   const isMounted = useRef(true);
+  const selectedChatRef = useRef(null);
+  // Tracks the latest chats list so WS reconnect can re-subscribe to all topics
+  const chatsRef = useRef([]);
 
   // Generate unique session ID per user to prevent duplicate connections
   const generateSessionId = useCallback((user) => {
@@ -33,18 +36,23 @@ export function ChatProvider({ children }) {
     return `${user.email}-${Date.now()}`;
   }, []);
 
-  // Load all chats from API (now includes all details)
+  const sortByLastActivity = (list) =>
+    [...list].sort((a, b) => new Date(b.lastActivity) - new Date(a.lastActivity));
+
+  // Load all chats from API and subscribe to all their topics
   const loadChats = useCallback(async () => {
     if (!isAuthenticated || !isMounted.current) return;
 
     try {
       setLoading(true);
       setError(null);
-      // ✅ This now returns full ChatDTO with receiverEmail, lastActivity, etc.
       const chatsData = await ChatAPI.getAllChats();
       if (isMounted.current) {
-        console.log("📋 Loaded chats with full details:", chatsData);
-        setChats(chatsData);
+        setChats(sortByLastActivity(chatsData));
+        chatsRef.current = chatsData;
+        // Subscribe to every chat topic so onMessage fires for all chats,
+        // enabling real-time unread counts without any backend changes.
+        webSocketService.subscribeToAllChats(chatsData);
       }
     } catch (err) {
       if (isMounted.current) {
@@ -181,9 +189,6 @@ export function ChatProvider({ children }) {
           };
         });
 
-        // Optional: refresh chat list for lastMessage, lastActivity
-        loadChats();
-
         // ✅ Save cursor-based pagination info per chat
         setMessagePagination((prev) => ({
           ...prev,
@@ -197,11 +202,11 @@ export function ChatProvider({ children }) {
       } catch (err) {
         if (isMounted.current) {
           console.error("Error loading messages:", err);
-          setError("Failed to load messages");
+          // Don't setError globally — message failures shouldn't replace the chat list
         }
       }
     },
-    [loadChats]
+    []
   );
 
   // const refreshMessages = useCallback(
@@ -258,58 +263,61 @@ export function ChatProvider({ children }) {
 
         if (!isMounted.current) return;
 
-        // Set up connection status listener
+        // Connection listener — on reconnect, re-subscribe to all known chat topics
         const unsubscribeConnection = webSocketService.onConnectionChange(
           (isConnected) => {
-            if (isMounted.current) {
-              console.log(
-                `🔌 WebSocket status: ${
-                  isConnected ? "Connected" : "Disconnected"
-                }`
-              );
-              setConnected(isConnected);
+            if (!isMounted.current) return;
+            console.log(`🔌 WebSocket status: ${isConnected ? "Connected" : "Disconnected"}`);
+            setConnected(isConnected);
+            if (isConnected && chatsRef.current.length > 0) {
+              // Re-subscribe to all chats so onMessage keeps firing after a reconnect
+              webSocketService.subscribeToAllChats(chatsRef.current);
             }
           }
         );
 
-        // Set up message listener for real-time updates
+        // Single message handler — covers both "show in chat area" and "unread badge"
         const unsubscribeMessages = webSocketService.onMessage(
           (messageData) => {
             if (!isMounted.current) return;
-
-            console.log("📨 Received message:", messageData);
             const chatId = messageData.chatId || messageData.groupId;
+            if (!chatId) return;
 
-            if (chatId) {
-              setMessages((prev) => {
-                const existing = prev[chatId] || [];
-                // Check for duplicate messages
-                const isDuplicate = existing.some(
-                  (msg) =>
-                    msg.messageId === messageData.messageId ||
-                    (msg.content === messageData.content &&
-                      msg.sentAt === messageData.sentAt)
-                );
+            // Append message to the relevant chat's message list
+            setMessages((prev) => {
+              const existing = prev[chatId] || [];
+              const isDuplicate = existing.some(
+                (msg) =>
+                  msg.messageId === messageData.messageId ||
+                  (msg.content === messageData.content &&
+                    msg.sentAt === messageData.sentAt)
+              );
+              if (!isDuplicate) {
+                return { ...prev, [chatId]: [...existing, messageData] };
+              }
+              return prev;
+            });
 
-                if (!isDuplicate) {
-                  return { ...prev, [chatId]: [...existing, messageData] };
-                }
-                return prev;
-              });
-
-              // Update chat's last activity
-              setChats((prev) =>
+            // Update the chat card: sort to top + set lastMessage.
+            // If chat is currently open → keep unreadCount at 0.
+            // If chat is in the background → increment unreadCount.
+            const isActive = selectedChatRef.current?.id === chatId;
+            setChats((prev) =>
+              sortByLastActivity(
                 prev.map((chat) =>
                   chat.id === chatId
                     ? {
                         ...chat,
                         lastActivity: messageData.sentAt,
-                        lastMessage: messageData.content, // ✅ Update lastMessage directly
+                        lastMessage: messageData.content,
+                        unreadCount: isActive
+                          ? 0
+                          : (chat.unreadCount || 0) + 1,
                       }
                     : chat
                 )
-              );
-            }
+              )
+            );
           }
         );
 
@@ -390,37 +398,69 @@ export function ChatProvider({ children }) {
 
   const selectChat = useCallback(
     async (chat) => {
-      if (!chat || !connected || !isMounted.current) return;
+      if (!chat || !isMounted.current) return;
 
-      console.log(
-        "🎯 Selecting chat (with full details already loaded):",
-        chat
-      );
       setSelectedChat(chat);
+      selectedChatRef.current = chat;
 
-      const subscription = webSocketService.subscribeToChat(
-        chat.id,
-        chat.isGroup
+      // Clear unread badge immediately on open
+      setChats((prev) =>
+        prev.map((c) => (c.id === chat.id ? { ...c, unreadCount: 0 } : c))
       );
 
-      if (subscription) {
-        console.log(`✅ Subscribed to chat: ${chat.id}`);
+      // Ensure subscribed (loadChats already subscribes all, but guard for new chats)
+      if (webSocketService.isConnected()) {
+        webSocketService.subscribeToChat(chat.id, chat.isGroup);
+      }
 
-        // ✅ Load messages if not already cached
-        if (!messages[chat.id]) {
-          await loadMessages(chat.id, chat.isGroup, null);
-        }
-      } else {
-        console.error("❌ Failed to subscribe to chat");
-        if (isMounted.current) {
-          setError("Failed to join chat");
-        }
+      // Load message history if not already cached
+      if (!messages[chat.id]) {
+        await loadMessages(chat.id, chat.isGroup, null);
       }
 
       return chat;
     },
-    [connected, messages, loadMessages]
+    [messages, loadMessages]
   );
+
+  // Background refresh every 10 s — syncs unread counts + last messages from DB.
+  // Silent: no loading spinner. Takes the MAX of server vs. client unread count
+  // so WebSocket-driven increments are never lost due to API lag.
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    const interval = setInterval(async () => {
+      if (!isMounted.current || !isAuthenticated) return;
+      try {
+        const chatsData = await ChatAPI.getAllChats();
+        if (!isMounted.current) return;
+        const activeChatId = selectedChatRef.current?.id;
+        setChats((prev) => {
+          const prevMap = new Map(prev.map((c) => [c.id, c]));
+          return sortByLastActivity(
+            chatsData.map((fresh) => {
+              const cached = prevMap.get(fresh.id);
+              return {
+                ...fresh,
+                // Active chat is always 0; others keep the higher of server vs. client
+                unreadCount:
+                  fresh.id === activeChatId
+                    ? 0
+                    : Math.max(
+                        fresh.unreadCount || 0,
+                        cached?.unreadCount || 0
+                      ),
+              };
+            })
+          );
+        });
+        chatsRef.current = chatsData;
+        webSocketService.subscribeToAllChats(chatsData);
+      } catch {
+        // silent — don't show errors for background refreshes
+      }
+    }, 10000);
+    return () => clearInterval(interval);
+  }, [isAuthenticated]);
 
   // ✅ UPDATED: Send a message using receiverEmail from chat object directly
   const sendMessage = useCallback(
@@ -463,10 +503,9 @@ export function ChatProvider({ children }) {
         return false;
       } finally {
         setSendingMessage(false);
-        loadChats();
       }
     },
-    [selectedChat, connected, user, loadChats]
+    [selectedChat, connected, user]
   );
 
   // Create a new personal chat
@@ -482,7 +521,10 @@ export function ChatProvider({ children }) {
 
         console.log("✅ Created personal chat (with full details):", newChat);
         setChats((prev) => [newChat, ...prev]);
-        await selectChat(newChat); // ✅ Chat already has all details
+        chatsRef.current = [newChat, ...chatsRef.current];
+        // Subscribe to this new chat's topic immediately
+        webSocketService.subscribeToChat(newChat.id, false);
+        await selectChat(newChat);
         return newChat;
       } catch (err) {
         if (isMounted.current) {
@@ -508,7 +550,10 @@ export function ChatProvider({ children }) {
 
         console.log("✅ Created group chat (with full details):", newChat);
         setChats((prev) => [newChat, ...prev]);
-        await selectChat(newChat); // ✅ Chat already has all details
+        chatsRef.current = [newChat, ...chatsRef.current];
+        // Subscribe to this new group's topic immediately
+        webSocketService.subscribeToChat(newChat.id, true);
+        await selectChat(newChat);
         return newChat;
       } catch (err) {
         if (isMounted.current) {
@@ -573,7 +618,9 @@ export function ChatProvider({ children }) {
 
         console.log("✅ Successfully left group:", response);
 
-        // Remove the group from chats list
+        // Remove the group from chats list and unsubscribe from its topic
+        webSocketService.unsubscribeFromChat(groupId);
+        chatsRef.current = chatsRef.current.filter((c) => c.id !== groupId);
         setChats((prev) => prev.filter((chat) => chat.id !== groupId));
 
         // Clear messages for this group
@@ -593,6 +640,7 @@ export function ChatProvider({ children }) {
         // If this was the selected chat, clear selection
         if (selectedChat?.id === groupId) {
           setSelectedChat(null);
+          selectedChatRef.current = null;
         }
 
         // Refresh chats to get updated list

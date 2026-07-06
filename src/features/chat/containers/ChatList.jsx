@@ -45,8 +45,6 @@ const ChatList = ({
   // Handle chat selection
   const handleChatSelect = (chat) => {
     onChatSelect?.(chat);
-    refreshChats();
-    // loadChats(); // Refresh chat list to update last message preview
   };
 
   // Handle logout
@@ -87,7 +85,7 @@ const ChatList = ({
       >
         <div className="flex-1 flex items-center justify-center">
           <div className="text-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600 mx-auto mb-2"></div>
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-2"></div>
             <p className="text-gray-400">
               Loading {sectionInfo.title.toLowerCase()}...
             </p>
@@ -127,7 +125,7 @@ const ChatList = ({
             </p>
             <button
               onClick={refreshChats}
-              className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
             >
               Try Again
             </button>

@@ -1,7 +1,5 @@
-// TypingArea.jsx - Simple, responsive input + send button
-
 import React, { useState, useRef, useEffect } from "react";
-import { Send } from "lucide-react";
+import { SendHorizonal } from "lucide-react";
 
 const TypingArea = ({
   onSendMessage,
@@ -13,32 +11,27 @@ const TypingArea = ({
 }) => {
   const [message, setMessage] = useState("");
   const [isTyping, setIsTyping] = useState(false);
-
   const textareaRef = useRef(null);
   const typingTimeoutRef = useRef(null);
 
-  const handleInputChange = (e) => {
+  const resizeTextarea = () => {
+    const el = textareaRef.current;
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = Math.min(el.scrollHeight, 120) + "px";
+  };
+
+  const handleChange = (e) => {
     const value = e.target.value;
     setMessage(value);
+    resizeTextarea();
 
-    // Auto-resize textarea
-    if (textareaRef.current) {
-      const el = textareaRef.current;
-      el.style.height = "auto";
-      const maxHeight = 7 * 18; // ~7 lines * 18px
-      el.style.height = Math.min(el.scrollHeight, maxHeight) + "px";
-    }
-
-    // Typing indicator
     if (value.trim() && !isTyping) {
       setIsTyping(true);
       onStartTyping?.();
     }
 
-    if (typingTimeoutRef.current) {
-      clearTimeout(typingTimeoutRef.current);
-    }
-
+    if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
     typingTimeoutRef.current = setTimeout(() => {
       if (isTyping) {
         setIsTyping(false);
@@ -47,101 +40,62 @@ const TypingArea = ({
     }, 1000);
   };
 
-  const handleSubmit = (e) => {
-    console.log("handleSubmit called");
-    e.preventDefault();
-    const trimmedMessage = message.trim();
-    if (!trimmedMessage || disabled) return;
-
-    onSendMessage?.({
-      content: trimmedMessage,
-      type: "text",
-    });
-
+  const submit = () => {
+    const trimmed = message.trim();
+    if (!trimmed || disabled) return;
+    onSendMessage?.({ content: trimmed, type: "text" });
     setMessage("");
     setIsTyping(false);
     onStopTyping?.();
-
-    if (textareaRef.current) {
-      textareaRef.current.style.height = "auto";
-    }
+    if (textareaRef.current) textareaRef.current.style.height = "auto";
   };
 
   const handleKeyDown = (e) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
-      handleSubmit(e);
+      submit();
     }
   };
 
-  useEffect(() => {
-    return () => {
-      if (typingTimeoutRef.current) {
-        clearTimeout(typingTimeoutRef.current);
-      }
-    };
-  }, []);
+  useEffect(() => () => { if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current); }, []);
+
+  const canSend = message.trim().length > 0 && !disabled;
 
   return (
-    <div
-      className={`typing-area-container sticky bottom-0 z-30
-        border-t border-gray-700 bg-gray-800
-        px-3 py-2 md:px-4 md:py-3
-        pb-[calc(0.5rem+env(safe-area-inset-bottom))]
-        ${className}
-      `}
-      style={{ WebkitOverflowScrolling: "touch" }}
-    >
-      <div className="max-w-6xl mx-auto">
-        <form
-          onSubmit={handleSubmit}
-          className="flex items-center gap-2 md:gap-3"
+    <div className={`px-4 py-3 bg-gray-900 ${className}`}>
+      <div className="flex items-end gap-2 bg-[#1e2130] border border-white/[0.07] rounded-2xl px-3 py-2 transition-all focus-within:border-blue-500/50 focus-within:bg-[#1e2130]">
+        {/* Textarea */}
+        <textarea
+          ref={textareaRef}
+          value={message}
+          onChange={handleChange}
+          onKeyDown={handleKeyDown}
+          placeholder={placeholder}
+          disabled={disabled}
+          rows={1}
+          className="flex-1 bg-transparent text-white placeholder-gray-500 text-sm resize-none outline-none leading-5 max-h-[120px] py-1 disabled:opacity-50"
+        />
+
+        {/* Send button */}
+        <button
+          type="button"
+          onClick={submit}
+          disabled={!canSend}
+          className={`
+            flex-shrink-0 mb-0.5 w-8 h-8 rounded-xl flex items-center justify-center transition-all duration-150
+            ${canSend
+              ? "bg-blue-600 text-white hover:bg-blue-500 active:scale-95 shadow-md shadow-blue-500/20"
+              : "text-gray-600 cursor-not-allowed"
+            }
+          `}
         >
-          {/* Input */}
-          <textarea
-            ref={textareaRef}
-            value={message}
-            onChange={handleInputChange}
-            onKeyDown={handleKeyDown}
-            placeholder={placeholder}
-            disabled={disabled}
-            className="
-    w-full bg-gray-700 border border-gray-600 
-    rounded-full
-    text-white placeholder-gray-400
-    focus:outline-none focus:ring-2 focus:ring-cyan-500
-    resize-none overflow-hidden
-
-    text-sm md:text-base
-    h-10 md:h-12             /* same height as button */
-    px-4                    /* balanced horizontal padding */
-
-    leading-[2.4rem] md:leading-[3rem]  
-    /* 👆 THIS centers placeholder vertically */
-  "
-            rows={1}
-          />
-
-          {/* Send Button */}
-          <button
-            onClick={handleSubmit}
-            disabled={!message.trim() || disabled}
-            className="
-    flex items-center justify-center
-    rounded-full
-    w-10 h-10 md:w-12 md:h-12
-    bg-cyan-500              /* perfect to your UI */
-    text-white
-    hover:bg-cyan-400        /* lighter and bright */
-    active:scale-95
-    transition-all duration-200
-    disabled:opacity-50 disabled:cursor-not-allowed
-  "
-          >
-            <Send className="w-5 h-5" />
-          </button>
-        </form>
+          <SendHorizonal size={15} strokeWidth={2.5} />
+        </button>
       </div>
+
+      {disabled && (
+        <p className="text-center text-xs text-gray-600 mt-2">Reconnecting…</p>
+      )}
     </div>
   );
 };

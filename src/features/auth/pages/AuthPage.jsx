@@ -99,7 +99,7 @@ export default function AuthPage() {
   };
 
   return (
-    <div className="relative w-screen h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50">
+    <div className="relative w-screen h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-indigo-50 to-blue-50">
       <div className="w-full max-w-md p-6 bg-[#12121f] text-gray-100 rounded-3xl shadow-2xl border border-gray-800">
         <div className="flex flex-col items-center mb-6">
           <img

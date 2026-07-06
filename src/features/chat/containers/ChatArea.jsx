@@ -10,11 +10,8 @@ import ChatAPI from "../services/ChatAPI";
 
 const ChatArea = ({ chat, currentUserId, onBack, className = "" }) => {
   const {
-    selectedChat,
     messages,
     sendMessage,
-    deleteMessage,
-    reactToMessage,
     loadMoreMessages,
     hasMoreMessages,
     loading,
@@ -24,7 +21,7 @@ const ChatArea = ({ chat, currentUserId, onBack, className = "" }) => {
     leaveGroup,
   } = useChat(chat?.id);
 
-  const { typingUsers, startTyping, stopTyping } = useTyping(chat?.email);
+  const { typingUsers, startTyping, stopTyping } = useTyping(chat?.id);
 
   const [isConnected, setIsConnected] = useState(true);
   const [summaryLoading, setSummaryLoading] = useState(false);
@@ -135,20 +132,10 @@ const ChatArea = ({ chat, currentUserId, onBack, className = "" }) => {
       />
     );
   }
-
-  if (!selectedChat) {
-  return (
-    <EmptyState
-      title="No chat selected"
-      description="Select a conversation to start messaging"
-      className={className}
-    />
-  );
-}
   
 
   return (
-    <div className={`flex flex-col h-full w w-full relative ${className}`}>
+    <div className={`flex flex-col h-full w-full relative bg-[#0e0e1a] ${className}`}>
       {/* Chat Top Bar */}
       <div className="flex-shrink-0 border-b border-gray-700">
         <ChatTopBar
@@ -192,8 +179,8 @@ const ChatArea = ({ chat, currentUserId, onBack, className = "" }) => {
           currentUserId={currentUserId}
           typingUsers={typingUsers}
           onEditMessage={() => {}}
-          onDeleteMessage={deleteMessage}
-          onReactToMessage={reactToMessage}
+          onDeleteMessage={() => {}}
+          onReactToMessage={() => {}}
           onLoadMore={loadMoreMessages}
           hasMore={hasMoreMessages}
           loading={loading}

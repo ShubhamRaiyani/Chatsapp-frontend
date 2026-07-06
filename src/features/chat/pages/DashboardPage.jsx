@@ -14,7 +14,7 @@ export default function DashboardPage() {
         </div>
         <button
           onClick={logout}
-          className="bg-purple-600 px-3 py-1 rounded text-sm hover:bg-purple-700 transition"
+          className="bg-blue-600 px-3 py-1 rounded text-sm hover:bg-blue-700 transition"
         >
           Logout
         </button>

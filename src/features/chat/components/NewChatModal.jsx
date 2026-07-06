@@ -117,8 +117,8 @@ const NewChatModal = ({ isOpen, onClose, onCreateChat, onCreateGroup, className 
       <div className={`bg-gray-800 rounded-lg w-full max-w-md h-[80vh] flex flex-col ${className}`}>
         {/* Tabs */}
         <div className="flex border-b border-gray-700">
-          <button onClick={() => { setMode("direct"); setStep(1); setSelectedUsers([]); }} className={`flex-1 py-3 text-center text-white cursor-pointer ${mode === "direct" ? "border-b-2 border-purple-500 font-semibold" : ""}`}>Direct</button>
-          <button onClick={() => { setMode("group"); setStep(1); setSelectedUsers([]); }} className={`flex-1 py-3 text-center text-white cursor-pointer ${mode === "group" ? "border-b-2 border-purple-500 font-semibold" : ""}`}>Group</button>
+          <button onClick={() => { setMode("direct"); setStep(1); setSelectedUsers([]); }} className={`flex-1 py-3 text-center text-white cursor-pointer ${mode === "direct" ? "border-b-2 border-blue-500 font-semibold" : ""}`}>Direct</button>
+          <button onClick={() => { setMode("group"); setStep(1); setSelectedUsers([]); }} className={`flex-1 py-3 text-center text-white cursor-pointer ${mode === "group" ? "border-b-2 border-blue-500 font-semibold" : ""}`}>Group</button>
         </div>
 
         {/* Header */}
@@ -136,7 +136,7 @@ const NewChatModal = ({ isOpen, onClose, onCreateChat, onCreateGroup, className 
           {mode === "direct" && (
             <div className="flex-1 flex flex-col overflow-hidden">
               <div className="relative px-4 pt-4">
-                <input type="text" ref={searchInputRef} placeholder="Search email (min 3 chars)..." className="w-full rounded-lg px-4 py-2 pl-10 bg-gray-700 placeholder-gray-400 text-white focus:outline-none focus:ring-2 focus:ring-purple-500" value={searchQuery} onChange={handleSearchChange} disabled={isCreating} />
+                <input type="text" ref={searchInputRef} placeholder="Search email (min 3 chars)..." className="w-full rounded-lg px-4 py-2 pl-10 bg-gray-700 placeholder-gray-400 text-white focus:outline-none focus:ring-2 focus:ring-blue-500" value={searchQuery} onChange={handleSearchChange} disabled={isCreating} />
                 <svg className="absolute left-6 top-6 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" >
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0" />
                 </svg>
@@ -173,9 +173,9 @@ const NewChatModal = ({ isOpen, onClose, onCreateChat, onCreateGroup, className 
               {selectedUsers.length > 0 && (
                 <div className="px-4 py-2 flex space-x-2 overflow-x-auto">
                   {selectedUsers.map(user => (
-                    <div key={user.email} className="flex items-center bg-purple-600 rounded-full text-white py-1 px-3 whitespace-nowrap">
+                    <div key={user.email} className="flex items-center bg-blue-600 rounded-full text-white py-1 px-3 whitespace-nowrap">
                       <span>{user.username || user.email}</span>
-                      <button onClick={() => !isCreating && handleUserSelect(user)} className="ml-2 rounded-full p-0.5 hover:bg-purple-700">
+                      <button onClick={() => !isCreating && handleUserSelect(user)} className="ml-2 rounded-full p-0.5 hover:bg-blue-700">
                         <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                         </svg>
@@ -189,7 +189,7 @@ const NewChatModal = ({ isOpen, onClose, onCreateChat, onCreateGroup, className 
               {step === 1 && (
                 <div className="flex-1 flex flex-col overflow-hidden">
                   <div className="relative px-4 py-2">
-                    <input type="text" ref={searchInputRef} placeholder="Search contacts..." className="w-full rounded-lg px-4 py-2 pl-10 bg-gray-700 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500" value={searchQuery} onChange={handleSearchChange} disabled={isCreating} />
+                    <input type="text" ref={searchInputRef} placeholder="Search contacts..." className="w-full rounded-lg px-4 py-2 pl-10 bg-gray-700 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500" value={searchQuery} onChange={handleSearchChange} disabled={isCreating} />
                     <svg className="absolute left-6 top-6 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" >
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0" />
                     </svg>
@@ -231,7 +231,7 @@ const NewChatModal = ({ isOpen, onClose, onCreateChat, onCreateGroup, className 
                               <div
                                 className={`w-5 h-5 flex-shrink-0 flex items-center justify-center border-2 rounded ${
                                   selected
-                                    ? "bg-purple-600 border-purple-600"
+                                    ? "bg-blue-600 border-blue-600"
                                     : "border-gray-500"
                                 }`}
                               >
@@ -265,7 +265,7 @@ const NewChatModal = ({ isOpen, onClose, onCreateChat, onCreateGroup, className 
                 <div className="flex flex-col px-4 py-2 flex-1 overflow-auto">
                   <div className="mb-4">
                     <label className="block text-sm font-semibold text-white mb-2">Group Name</label>
-                    <input type="text" value={groupName} onChange={e => setGroupName(e.target.value)} placeholder="Enter group name..." className="w-full rounded-lg bg-gray-700 text-white px-4 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500" disabled={isCreating} />
+                    <input type="text" value={groupName} onChange={e => setGroupName(e.target.value)} placeholder="Enter group name..." className="w-full rounded-lg bg-gray-700 text-white px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" disabled={isCreating} />
                   </div>
                   <div className="flex-1 overflow-auto space-y-2">
                     {selectedUsers.map(user => (
@@ -303,7 +303,7 @@ const NewChatModal = ({ isOpen, onClose, onCreateChat, onCreateGroup, className 
             <button
               onClick={handleCreateGroup}
               disabled={isCreating || (step === 1 ? selectedUsers.length === 0 : !groupName.trim())}
-              className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded"
+              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded"
             >
               {isCreating ? <span className="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" /> : null}
               {step === 1 ? "Next" : "Create"}

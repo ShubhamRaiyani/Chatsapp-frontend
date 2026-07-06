@@ -60,10 +60,10 @@ const MessageList = ({
   }, [messages]);
 
   const renderDateSeparator = (date) => (
-    <div key={`date-${date}`} className="flex justify-center my-4">
-      <div className="bg-gray-700 text-gray-300 text-xs px-3 py-1 rounded-full">
-        {date}
-      </div>
+    <div key={`date-${date}`} className="flex items-center gap-3 my-5 px-4">
+      <div className="flex-1 h-px bg-white/[0.06]" />
+      <span className="text-[11px] text-gray-500 bg-[#13131f] px-2">{date}</span>
+      <div className="flex-1 h-px bg-white/[0.06]" />
     </div>
   );
 
@@ -71,8 +71,8 @@ const MessageList = ({
     <div className={`flex-1 flex flex-col min-h-0 relative ${className}`}>
       {/* Loading indicator for pagination */}
       {loading && hasMore && (
-        <div className="flex justify-center py-2">
-          <div className="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+        <div className="flex justify-center py-3">
+          <div className="w-5 h-5 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
         </div>
       )}
 
@@ -80,8 +80,7 @@ const MessageList = ({
       <div
         ref={containerRef}
         className={`
-          flex-1 overflow-y-auto custom-scrollbar
-          ${isMobile ? "px-2 py-2" : "px-4 py-4"}
+          flex-1 overflow-y-auto custom-scrollbar py-4
         `}
         // Hide content until initial scroll-to-bottom is done (managed by hook)
         style={{
