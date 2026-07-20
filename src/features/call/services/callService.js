@@ -5,6 +5,22 @@ const ICE_SERVERS = {
   iceServers: [
     { urls: "stun:stun.l.google.com:19302" },
     { urls: "stun:stun1.l.google.com:19302" },
+    // Free public TURN — required for cross-network calls (mobile ↔ WiFi)
+    {
+      urls: "turn:openrelay.metered.ca:80",
+      username: "openrelayproject",
+      credential: "openrelayproject",
+    },
+    {
+      urls: "turn:openrelay.metered.ca:443",
+      username: "openrelayproject",
+      credential: "openrelayproject",
+    },
+    {
+      urls: "turn:openrelay.metered.ca:443?transport=tcp",
+      username: "openrelayproject",
+      credential: "openrelayproject",
+    },
   ],
 };
 
@@ -19,11 +35,20 @@ class CallService {
     this._subscribed = false;
   }
 
-  // Subscribe to /user/queue/call — call once after WS is connected
+  // Subscribe to /user/queue/call — safe to call on every reconnect
   subscribeToCallSignals() {
-    if (this._subscribed || !webSocketService.isConnected()) return;
+    if (!webSocketService.isConnected()) return;
     const client = webSocketService.stompClient;
     if (!client) return;
+
+    // Unsubscribe stale subscription from a previous connection first
+    if (this.callSubscription) {
+      try { this.callSubscription.unsubscribe(); } catch (_) {}
+      this.callSubscription = null;
+      this._subscribed = false;
+    }
+
+    if (this._subscribed) return;
 
     this.callSubscription = client.subscribe("/user/queue/call", (msg) => {
       try {

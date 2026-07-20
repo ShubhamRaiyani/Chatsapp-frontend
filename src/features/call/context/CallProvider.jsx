@@ -16,23 +16,19 @@ export function CallProvider({ children }) {
   const [activeToEmail, setActiveToEmail] = useState(null);
   const [activeDisplayName, setActiveDisplayName] = useState(null);
 
-  const subscribeAttempted = useRef(false);
-
-  // Subscribe to call signals as soon as WS connects
+  // Subscribe to call signals on every (re)connect — callService handles de-duplication
   useEffect(() => {
     const unsub = webSocketService.onConnectionChange((connected) => {
-      if (connected && !subscribeAttempted.current) {
+      if (connected) {
         callService.subscribeToCallSignals();
-        subscribeAttempted.current = true;
-      }
-      if (!connected) {
-        subscribeAttempted.current = false;
+      } else {
+        // Mark as unsubscribed so the next connect re-subscribes cleanly
+        callService.unsubscribe();
       }
     });
-    // In case already connected when this mounts
-    if (webSocketService.isConnected() && !subscribeAttempted.current) {
+    // Already connected when this mounts
+    if (webSocketService.isConnected()) {
       callService.subscribeToCallSignals();
-      subscribeAttempted.current = true;
     }
     return unsub;
   }, []);

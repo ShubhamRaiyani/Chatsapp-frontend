@@ -15,6 +15,7 @@ const ChatArea = ({ chat, currentUserId, onBack, className = "" }) => {
   const {
     messages,
     sendMessage,
+    editMessage,
     loadMoreMessages,
     hasMoreMessages,
     loading,
@@ -34,6 +35,8 @@ const ChatArea = ({ chat, currentUserId, onBack, className = "" }) => {
   const [summaryLoading, setSummaryLoading] = useState(false);
   const [summaryError, setSummaryError] = useState(null);
   const [showChatInfo, setShowChatInfo] = useState(false);
+  const [replyingTo, setReplyingTo] = useState(null);
+  const [editingMessage, setEditingMessage] = useState(null);
 
   // The other person's email (null for groups)
   const otherUserEmail = !chat?.isGroup
@@ -104,8 +107,37 @@ const ChatArea = ({ chat, currentUserId, onBack, className = "" }) => {
     }
   };
 
+  const handleReply = (message) => {
+    setEditingMessage(null);
+    setReplyingTo(message);
+  };
+
+  const handleCancelReply = () => {
+    setReplyingTo(null);
+  };
+
+  const handleEdit = (message) => {
+    setReplyingTo(null);
+    setEditingMessage(message);
+  };
+
+  const handleCancelEdit = () => {
+    setEditingMessage(null);
+  };
+
   const handleSendMessage = async (messageData) => {
     try {
+      // Edit mode — call PATCH instead of send
+      if (editingMessage) {
+        const msgId = editingMessage.messageId || editingMessage.id;
+        setEditingMessage(null);
+        await editMessage(msgId, messageData.content);
+        return;
+      }
+
+      const replyToId = replyingTo?.messageId || replyingTo?.id || null;
+      setReplyingTo(null);
+
       if (chat && !chat.isGroup) {
         let receiverEmail = chat.receiverEmail;
 
@@ -117,9 +149,9 @@ const ChatArea = ({ chat, currentUserId, onBack, className = "" }) => {
 
         if (!receiverEmail) throw new Error("Unable to determine recipient");
 
-        await sendMessage(messageData.content, receiverEmail);
+        await sendMessage(messageData.content, receiverEmail, replyToId);
       } else if (chat && chat.isGroup) {
-        await sendMessage(messageData.content, null);
+        await sendMessage(messageData.content, null, replyToId);
       }
     } catch (error) {
       console.error("Failed to send message:", error);
@@ -184,8 +216,7 @@ const ChatArea = ({ chat, currentUserId, onBack, className = "" }) => {
       <div className="flex-shrink-0 border-b border-gray-700">
         <ChatTopBar
           chat={chat}
-          onStartCall={() => console.log("Starting call")}
-          onStartVideoCall={() => console.log("Starting video call")}
+          otherUserEmail={otherUserEmail}
           onShowInfo={handleShowInfo}
           onShowMembers={handleShowMembers}
           onBack={onBack}
@@ -223,9 +254,10 @@ const ChatArea = ({ chat, currentUserId, onBack, className = "" }) => {
           messages={messages}
           currentUserId={currentUserId}
           typingUsers={typingUsers}
-          onEditMessage={() => {}}
+          onEditMessage={handleEdit}
           onDeleteMessage={() => {}}
           onReactToMessage={() => {}}
+          onReply={handleReply}
           onLoadMore={loadMoreMessages}
           hasMore={hasMoreMessages}
           loading={loading}
@@ -243,6 +275,10 @@ const ChatArea = ({ chat, currentUserId, onBack, className = "" }) => {
           chatId={chat?.id}
           disabled={!isConnected}
           placeholder={`Message ${chat?.displayName || "..."}`}
+          replyTo={replyingTo}
+          onCancelReply={handleCancelReply}
+          editingMessage={editingMessage}
+          onCancelEdit={handleCancelEdit}
         />
       </div>
 

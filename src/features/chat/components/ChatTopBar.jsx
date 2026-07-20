@@ -5,6 +5,7 @@ import { useCallContext } from "../../call/context/CallContext";
 
 const ChatTopBar = ({
   chat,
+  otherUserEmail,
   onShowInfo,
   onShowMembers,
   onBack,
@@ -15,6 +16,8 @@ const ChatTopBar = ({
 }) => {
   const { startCall, phase } = useCallContext();
   const inCall = phase !== "idle";
+  // Use the explicitly passed other-user email; fall back to participantEmails if missing
+  const callTarget = otherUserEmail || chat?.receiverEmail;
   const [showDropdown, setShowDropdown] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
 
@@ -82,16 +85,16 @@ const ChatTopBar = ({
         {!chat?.isGroup && (
           <>
             <button
-              onClick={() => startCall(chat.id, chat.receiverEmail, "AUDIO", chat.displayName)}
-              disabled={inCall}
+              onClick={() => startCall(chat.id, callTarget, "AUDIO", chat.displayName)}
+              disabled={inCall || !callTarget}
               title="Voice call"
               className="w-9 h-9 flex items-center justify-center rounded-xl text-gray-400 hover:text-white hover:bg-white/5 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
             >
               <Phone size={18} />
             </button>
             <button
-              onClick={() => startCall(chat.id, chat.receiverEmail, "VIDEO", chat.displayName)}
-              disabled={inCall}
+              onClick={() => startCall(chat.id, callTarget, "VIDEO", chat.displayName)}
+              disabled={inCall || !callTarget}
               title="Video call"
               className="w-9 h-9 flex items-center justify-center rounded-xl text-gray-400 hover:text-white hover:bg-white/5 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
             >
