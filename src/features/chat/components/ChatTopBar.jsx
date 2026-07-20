@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import Avatar from "./ui/Avatar";
-import { ArrowLeft, Sparkles, MoreVertical, Info, Users } from "lucide-react";
+import { ArrowLeft, Sparkles, MoreVertical, Info, Users, Phone, Video } from "lucide-react";
+import { useCallContext } from "../../call/context/CallContext";
 
 const ChatTopBar = ({
   chat,
@@ -12,6 +13,8 @@ const ChatTopBar = ({
   isOtherUserOnline = false,
   className = "",
 }) => {
+  const { startCall, phase } = useCallContext();
+  const inCall = phase !== "idle";
   const [showDropdown, setShowDropdown] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
 
@@ -75,6 +78,28 @@ const ChatTopBar = ({
 
       {/* Actions */}
       <div className="flex items-center gap-1 flex-shrink-0">
+        {/* Call buttons — only for 1-to-1 chats */}
+        {!chat?.isGroup && (
+          <>
+            <button
+              onClick={() => startCall(chat.id, chat.receiverEmail, "AUDIO", chat.displayName)}
+              disabled={inCall}
+              title="Voice call"
+              className="w-9 h-9 flex items-center justify-center rounded-xl text-gray-400 hover:text-white hover:bg-white/5 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              <Phone size={18} />
+            </button>
+            <button
+              onClick={() => startCall(chat.id, chat.receiverEmail, "VIDEO", chat.displayName)}
+              disabled={inCall}
+              title="Video call"
+              className="w-9 h-9 flex items-center justify-center rounded-xl text-gray-400 hover:text-white hover:bg-white/5 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              <Video size={18} />
+            </button>
+          </>
+        )}
+
         {/* AI Summary button */}
         {onSummarize && (
           <div className="relative group">
