@@ -44,6 +44,7 @@ export default function CallScreen() {
 
   const localVideoRef  = useRef(null);
   const remoteVideoRef = useRef(null);
+  const remoteAudioRef = useRef(null);
   const hideTimerRef   = useRef(null);
 
   const isActive     = phase === "active";
@@ -78,6 +79,9 @@ export default function CallScreen() {
       mainRef.current.srcObject = pipSwapped ? remoteStream : localStream;
     if (pipRef.current && (pipSwapped ? localStream : remoteStream))
       pipRef.current.srcObject  = pipSwapped ? localStream  : remoteStream;
+    // For audio calls, play remote stream through a dedicated audio element
+    if (remoteAudioRef.current && remoteStream)
+      remoteAudioRef.current.srcObject = remoteStream;
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [localStream, remoteStream, pipSwapped]);
 
@@ -92,6 +96,8 @@ export default function CallScreen() {
       className="fixed inset-0 z-[90] bg-gray-950 flex flex-col select-none"
       onClick={isVideo && isActive ? showControls : undefined}
     >
+      {/* Plays remote audio for voice calls (and as fallback for video) */}
+      <audio ref={remoteAudioRef} autoPlay playsInline hidden />
       {/* ── Main area ── */}
       <div className="flex-1 relative flex items-center justify-center bg-gray-900 overflow-hidden">
 

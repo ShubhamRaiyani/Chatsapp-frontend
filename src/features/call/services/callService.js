@@ -141,8 +141,9 @@ class CallService {
         break;
 
       case "call-accepted":
-        // Receiver accepted → send the WebRTC offer now
+        // Receiver accepted → send the WebRTC offer, then transition caller to active
         await this._sendOffer();
+        this._emit({ type: "accepted", localStream: this.localStream });
         break;
 
       case "call-rejected":
