@@ -31,48 +31,19 @@ class CallService {
     this.remoteStream = null;
     this.activeCall = null;      // { chatId, toEmail, callType }
     this.callCallbacks = new Set();
-    this.callSubscription = null;
-    this._subscribed = false;
-  }
 
-  // Subscribe to /user/queue/call — safe to call on every reconnect
-  subscribeToCallSignals() {
-    if (!webSocketService.isConnected()) return;
-    const client = webSocketService.stompClient;
-    if (!client) return;
-
-    // Unsubscribe stale subscription from a previous connection first
-    if (this.callSubscription) {
-      try { this.callSubscription.unsubscribe(); } catch (_) {}
-      this.callSubscription = null;
-      this._subscribed = false;
-    }
-
-    if (this._subscribed) return;
-
-    this.callSubscription = client.subscribe("/user/queue/call", (msg) => {
-      try {
-        const signal = JSON.parse(msg.body);
-        this._handleSignal(signal);
-      } catch (e) {
-        console.error("Call signal parse error:", e);
-      }
-    });
-    this._subscribed = true;
-    console.log("📞 Subscribed to /user/queue/call");
-  }
-
-  unsubscribe() {
-    if (this.callSubscription) {
-      try { this.callSubscription.unsubscribe(); } catch (_) {}
-      this.callSubscription = null;
-    }
-    this._subscribed = false;
+    // Route signals from WebSocketService into this service.
+    // The subscription itself is owned by WebSocketService.onConnect.
+    webSocketService.onCallSignal((signal) => this._handleSignal(signal));
   }
 
   // ─── Outgoing call ───────────────────────────────────────────────────────
 
   async startCall(chatId, toEmail, callType = "AUDIO") {
+    if (!toEmail) {
+      console.error("startCall: toEmail is required");
+      return;
+    }
     if (this.activeCall) {
       console.warn("Already in a call");
       return;

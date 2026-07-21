@@ -14,9 +14,11 @@ class WebSocketService {
     // Map of chatId/groupId → STOMP subscription (one per chat)
     this.subscriptions = new Map();
     this.notificationSubscription = null;
+    this.callSignalSubscription = null;
     this.messageCallbacks = new Set();
     this.connectionCallbacks = new Set();
     this.notificationCallbacks = new Set();
+    this.callSignalCallbacks = new Set();
     this.typingCallbacks = new Set();
     this.presenceCallbacks = new Set();
     this.presenceSubscription = null;
@@ -87,7 +89,7 @@ class WebSocketService {
         this.connectionPromise = null;
         this.reconnectAttempts = 0;
 
-        // Personal notification queue (backup for edge cases)
+        // Personal notification queue
         this.notificationSubscription = this.stompClient.subscribe(
           "/user/queue/notifications",
           (message) => {
@@ -101,6 +103,23 @@ class WebSocketService {
             }
           }
         );
+
+        // Call signal queue — subscribed here so it is always active on connect,
+        // independent of React component lifecycle timing.
+        this.callSignalSubscription = this.stompClient.subscribe(
+          "/user/queue/call",
+          (message) => {
+            try {
+              const data = JSON.parse(message.body);
+              this.callSignalCallbacks.forEach((cb) => {
+                try { cb(data); } catch (e) { console.error("Call signal callback error:", e); }
+              });
+            } catch (e) {
+              console.error("Call signal parse error:", e);
+            }
+          }
+        );
+        console.log("📞 Subscribed to /user/queue/call");
 
         // Global presence topic — subscribe once per connection
         this.presenceSubscription = this.stompClient.subscribe(
@@ -159,6 +178,8 @@ class WebSocketService {
         // All subscriptions are dead after disconnect — clear the map
         this.subscriptions.clear();
         this.presenceSubscription = null;
+        this.callSignalSubscription = null;
+        this.notificationSubscription = null;
         this.connectionCallbacks.forEach((cb) => {
           try { cb(false); } catch (e) { console.error("Callback error:", e); }
         });
@@ -192,6 +213,10 @@ class WebSocketService {
       try { this.presenceSubscription.unsubscribe(); } catch (e) {}
       this.presenceSubscription = null;
     }
+    if (this.callSignalSubscription) {
+      try { this.callSignalSubscription.unsubscribe(); } catch (e) {}
+      this.callSignalSubscription = null;
+    }
     if (this.stompClient) {
       try { this.stompClient.forceDisconnect(); } catch (e) {}
     }
@@ -207,6 +232,10 @@ class WebSocketService {
         if (this.presenceSubscription) {
           try { this.presenceSubscription.unsubscribe(); } catch (e) {}
           this.presenceSubscription = null;
+        }
+        if (this.callSignalSubscription) {
+          try { this.callSignalSubscription.unsubscribe(); } catch (e) {}
+          this.callSignalSubscription = null;
         }
         this.stompClient.deactivate();
       } catch (error) {
@@ -318,6 +347,11 @@ class WebSocketService {
   onPresence(callback) {
     this.presenceCallbacks.add(callback);
     return () => this.presenceCallbacks.delete(callback);
+  }
+
+  onCallSignal(callback) {
+    this.callSignalCallbacks.add(callback);
+    return () => this.callSignalCallbacks.delete(callback);
   }
 
   /** Synchronous read — returns true/false if known, null if we have no data yet */

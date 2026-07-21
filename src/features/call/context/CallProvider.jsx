@@ -1,7 +1,6 @@
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import CallContext from "./CallContext";
 import callService from "../services/callService";
-import webSocketService from "../../chat/services/WebSocketService";
 
 // call phases: idle | outgoing | incoming | active
 export function CallProvider({ children }) {
@@ -15,23 +14,6 @@ export function CallProvider({ children }) {
   const [activeChatId, setActiveChatId] = useState(null);
   const [activeToEmail, setActiveToEmail] = useState(null);
   const [activeDisplayName, setActiveDisplayName] = useState(null);
-
-  // Subscribe to call signals on every (re)connect — callService handles de-duplication
-  useEffect(() => {
-    const unsub = webSocketService.onConnectionChange((connected) => {
-      if (connected) {
-        callService.subscribeToCallSignals();
-      } else {
-        // Mark as unsubscribed so the next connect re-subscribes cleanly
-        callService.unsubscribe();
-      }
-    });
-    // Already connected when this mounts
-    if (webSocketService.isConnected()) {
-      callService.subscribeToCallSignals();
-    }
-    return unsub;
-  }, []);
 
   // Listen to call events from callService
   useEffect(() => {
