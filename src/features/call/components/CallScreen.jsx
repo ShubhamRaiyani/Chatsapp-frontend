@@ -153,7 +153,7 @@ export default function CallScreen() {
             autoPlay
             playsInline
             muted={pipSwapped}   // muted when local is in main
-            className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-200 ${swapping ? "opacity-0" : "opacity-100"}`}
+            className={`absolute inset-0 w-full h-full object-contain bg-black transition-opacity duration-200 ${swapping ? "opacity-0" : "opacity-100"}`}
           />
 
           {/* PiP feed (video B) — tap to swap */}
