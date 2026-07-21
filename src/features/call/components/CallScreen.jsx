@@ -75,14 +75,23 @@ export default function CallScreen() {
   // ── attach audio for voice calls ──────────────────────────────────────────
   useEffect(() => {
     if (callType === "VIDEO") return;
+    const speakEl = remoteSpeakRef.current;
+    const audioEl = remoteAudioRef.current;
+    if (!speakEl || !audioEl) return;
+
+    // React's muted prop is broken — always set imperatively
+    speakEl.muted = false;
+
     if (speakerOn) {
-      // Route through hidden <video> → iOS forces speaker output for video elements
-      if (remoteSpeakRef.current) remoteSpeakRef.current.srcObject = remoteStream ?? null;
-      if (remoteAudioRef.current) remoteAudioRef.current.srcObject = null;
+      // <video> offscreen → iOS routes to external speaker
+      audioEl.srcObject = null;
+      speakEl.srcObject = remoteStream ?? null;
+      if (remoteStream) speakEl.play().catch(() => {});
     } else {
-      // Route through <audio> → earpiece on iOS, default on Android/desktop
-      if (remoteAudioRef.current) remoteAudioRef.current.srcObject = remoteStream ?? null;
-      if (remoteSpeakRef.current) remoteSpeakRef.current.srcObject = null;
+      // <audio> → earpiece on iOS, OS default on Android/desktop
+      speakEl.srcObject = null;
+      audioEl.srcObject = remoteStream ?? null;
+      if (remoteStream) audioEl.play().catch(() => {});
     }
   }, [remoteStream, callType, speakerOn]);
 
@@ -137,10 +146,19 @@ export default function CallScreen() {
       className="fixed inset-0 z-[90] bg-gray-950 select-none overflow-hidden"
       onClick={isVideo && isActive ? showControls : undefined}
     >
-      {/* ── Hidden audio elements for voice calls ───────────────────────── */}
+      {/* Earpiece: <audio> routes to earpiece on iOS */}
       <audio ref={remoteAudioRef} autoPlay playsInline className="hidden" />
-      {/* Hidden video element — used for speakerphone routing on iOS */}
-      <video ref={remoteSpeakRef} autoPlay playsInline muted={false} className="hidden" />
+      {/*
+        Loudspeaker: iOS routes <video> audio through the external speaker.
+        Must NOT be display:none — use offscreen instead, or iOS silences it.
+        muted prop is broken in React, so we set .muted=false imperatively.
+      */}
+      <video
+        ref={remoteSpeakRef}
+        autoPlay
+        playsInline
+        style={{ position: "fixed", width: "1px", height: "1px", opacity: 0, pointerEvents: "none", top: "-9999px", left: "-9999px" }}
+      />
 
       {/* ═══════════════════════════════════════════════════════════════════
           VIDEO CALL layout
