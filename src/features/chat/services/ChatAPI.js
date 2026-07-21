@@ -178,6 +178,17 @@ async getMessagesCursorForGroup(groupId, beforeMessageId = null, limit = 20) {
     return response.text();
   },
 
+  async editMessage(messageId, newContent) {
+    const response = await fetch(`${API_BASE}/messages/${messageId}`, {
+      method: "PATCH",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ content: newContent }),
+    });
+    if (!response.ok) throw new Error(`Failed to edit message: ${response.status}`);
+    return response.json();
+  },
+
   async leaveGroup(groupId) {
     try {
       const response = await fetch(`${API_BASE}/chats/group/${groupId}/leave`, {

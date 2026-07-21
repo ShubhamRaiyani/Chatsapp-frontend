@@ -464,7 +464,7 @@ export function ChatProvider({ children }) {
 
   // ✅ UPDATED: Send a message using receiverEmail from chat object directly
   const sendMessage = useCallback(
-    async (content, receiverEmailOverride = null) => {
+    async (content, receiverEmailOverride = null, replyToId = null) => {
       if (!selectedChat || !connected || !user || !content.trim()) {
         console.warn("Cannot send message: missing requirements");
         return false;
@@ -475,14 +475,13 @@ export function ChatProvider({ children }) {
         let messageData;
 
         if (selectedChat.isGroup) {
-          // ✅ Group message payload
           messageData = {
             content: content.trim(),
             groupId: selectedChat.id,
             messageType: "TEXT",
+            ...(replyToId && { replyToId }),
           };
         } else {
-          // ✅ Direct message payload
           const receiverEmail =
             receiverEmailOverride || selectedChat.receiverEmail;
 
@@ -491,6 +490,7 @@ export function ChatProvider({ children }) {
             chatId: selectedChat.id,
             receiverEmail: receiverEmail,
             messageType: "TEXT",
+            ...(replyToId && { replyToId }),
           };
         }
 
@@ -658,6 +658,25 @@ export function ChatProvider({ children }) {
     [isAuthenticated, selectedChat, loadChats]
   );
 
+  const editMessage = useCallback(
+    async (messageId, newContent) => {
+      const updated = await ChatAPI.editMessage(messageId, newContent);
+      // Patch the message in local state so the UI updates immediately
+      setMessages((prev) => {
+        const chatId = updated.chatId || updated.groupId;
+        if (!chatId || !prev[chatId]) return prev;
+        return {
+          ...prev,
+          [chatId]: prev[chatId].map((m) =>
+            (m.messageId || m.id) === updated.messageId ? { ...m, content: updated.content, edited: true } : m
+          ),
+        };
+      });
+      return updated;
+    },
+    []
+  );
+
   // Get current messages and pagination for context
   const currentMessages = selectedChat ? messages[selectedChat.id] || [] : [];
   const currentPagination = selectedChat
@@ -690,7 +709,7 @@ export function ChatProvider({ children }) {
     loadMoreMessages,
 
     leaveGroup,
-    // ✅ REMOVED: loadChatDetails - no longer needed
+    editMessage,
 
     // Current user
     currentUser: user,

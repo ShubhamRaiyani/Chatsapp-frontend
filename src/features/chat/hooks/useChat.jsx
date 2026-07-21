@@ -25,6 +25,7 @@ export function useChat(chatId = null, filterType = null) {
     // actions from provider
     loadMoreMessages: loadMoreFromProvider, // works on selectedChat
     sendMessage: sendFromProvider,
+    editMessage: editMessageFromProvider,
     leaveGroup: leaveGroupFromProvider,
     createPersonalChat,
     createGroupChat,
@@ -106,10 +107,17 @@ export function useChat(chatId = null, filterType = null) {
   // ===========================
 
   const sendMessage = useCallback(
-    async (content, receiverEmail = null) => {
-      return await sendFromProvider(content, receiverEmail);
+    async (content, receiverEmail = null, replyToId = null) => {
+      return await sendFromProvider(content, receiverEmail, replyToId);
     },
     [sendFromProvider]
+  );
+
+  const editMessage = useCallback(
+    async (messageId, newContent) => {
+      return await editMessageFromProvider(messageId, newContent);
+    },
+    [editMessageFromProvider]
   );
 
   const leaveGroup = useCallback(
@@ -181,6 +189,7 @@ export function useChat(chatId = null, filterType = null) {
 
     // Actions
     sendMessage,
+    editMessage,
     loadMoreMessages,
     leaveGroup,
     createPersonalChat,

@@ -12,6 +12,7 @@ const MessageList = ({
   onEditMessage,
   onDeleteMessage,
   onReactToMessage,
+  onReply,
   onLoadMore,
   hasMore,
   loading,
@@ -122,6 +123,7 @@ const MessageList = ({
                   currentUserId={currentUserId}
                   UsernameofChat={UsernameofChat}
                   isMobile={isMobile}
+                  onReply={onReply}
                   onEdit={onEditMessage}
                   onDelete={onDeleteMessage}
                   onReact={onReactToMessage}
